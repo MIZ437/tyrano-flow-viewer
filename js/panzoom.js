@@ -42,6 +42,17 @@ class PanZoomController {
         this.container.addEventListener('touchstart', (e) => this.onTouchStart(e), { passive: false });
         this.container.addEventListener('touchmove', (e) => this.onTouchMove(e), { passive: false });
         this.container.addEventListener('touchend', (e) => this.onTouchEnd(e));
+
+        // ウィンドウリサイズ時に再配置
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (this.svg) {
+                    this.centerContent();
+                }
+            }, 200);
+        });
     }
 
     /**
@@ -54,41 +65,70 @@ class PanZoomController {
             this.svg.style.transformOrigin = '0 0';
             this.svg.style.cursor = 'grab';
 
-            // 少し遅延させてから中央配置（SVGのサイズが確定するのを待つ）
-            setTimeout(() => {
-                this.centerContent();
-            }, 100);
+            // レイアウトが確定するまで少し待ってから自動フィット
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    this.centerContent();
+                }, 50);
+            });
         }
     }
 
     /**
-     * コンテンツを中央に配置
+     * コンテンツを中央に配置（フィットさせる）
+     * 最初のノードを水平中央に配置する
      */
     centerContent() {
         if (!this.svg) return;
 
         const containerRect = this.container.getBoundingClientRect();
-        const svgBBox = this.svg.getBBox();
+        if (containerRect.width < 50 || containerRect.height < 50) {
+            return;
+        }
 
-        // SVGの実際のサイズを取得
-        const svgWidth = svgBBox.width + svgBBox.x * 2;
-        const svgHeight = svgBBox.height + svgBBox.y * 2;
+        try {
+            const svgBBox = this.svg.getBBox();
+            const svgWidth = svgBBox.width || 500;
+            const svgHeight = svgBBox.height || 500;
 
-        // コンテナに収まるようにスケールを計算
-        const padding = 40;
-        const scaleX = (containerRect.width - padding * 2) / svgWidth;
-        const scaleY = (containerRect.height - padding * 2) / svgHeight;
+            // コンテナに収まるようにスケールを計算
+            const padding = 40;
+            const availableWidth = containerRect.width - padding * 2;
+            const availableHeight = containerRect.height - padding * 2;
 
-        // 最大スケールは1（等倍以上にはしない）
-        this.scale = Math.min(scaleX, scaleY, 1);
+            const scaleX = availableWidth / svgWidth;
+            const scaleY = availableHeight / svgHeight;
+            this.scale = Math.min(scaleX, scaleY, 1.5);
+            this.scale = Math.max(this.scale, 0.3);
 
-        // 中央に配置
-        const scaledWidth = svgWidth * this.scale;
-        const scaledHeight = svgHeight * this.scale;
-        this.translateX = (containerRect.width - scaledWidth) / 2;
-        this.translateY = (containerRect.height - scaledHeight) / 2;
+            // 初期位置を設定（後で調整）
+            this.translateX = 0;
+            this.translateY = padding - svgBBox.y * this.scale;
+            this.applyTransform();
 
-        this.applyTransform();
+            // 最初のノードを見つけて、実際の画面位置で水平センタリング
+            const firstNode = this.svg.querySelector('.node');
+
+            if (firstNode) {
+                // 現在のノードの画面上の位置を取得
+                const nodeRect = firstNode.getBoundingClientRect();
+                const nodeCenterScreenX = nodeRect.left + nodeRect.width / 2;
+
+                // コンテナの中央の画面位置
+                const containerCenterScreenX = containerRect.left + containerRect.width / 2;
+
+                // 必要なオフセットを計算して適用
+                const offsetNeeded = containerCenterScreenX - nodeCenterScreenX;
+                this.translateX = offsetNeeded;
+            }
+
+            // 垂直：上部に余白を残して配置
+            this.translateY = padding - svgBBox.y * this.scale;
+
+            this.applyTransform();
+        } catch (e) {
+            console.warn('centerContent error:', e);
+        }
     }
 
     /**

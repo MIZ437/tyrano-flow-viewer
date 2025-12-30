@@ -221,10 +221,182 @@ body {
     min-height: 0;
 }
 
+/* 表示切替タブ */
+.view-tabs {
+    display: flex;
+    background-color: #2d2d2d;
+    border-bottom: 1px solid #404040;
+    padding: 0 8px;
+    flex-shrink: 0;
+}
+
+.view-tab {
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    color: #808080;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.view-tab:hover {
+    color: #d4d4d4;
+}
+
+.view-tab.active {
+    color: #ffffff;
+    border-bottom-color: #0e639c;
+}
+
+.view-content-wrapper {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.view-content {
+    display: none;
+}
+
+.view-content.active {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* ========================================
+   タイムラインビュー
+   ======================================== */
+.timeline-view {
+    background-color: #1a1a1a;
+}
+
+.timeline-container {
+    height: 100%;
+    overflow: auto;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.timeline-tracks {
+    min-width: max-content;
+}
+
+.timeline-track {
+    display: flex;
+    align-items: stretch;
+    margin-bottom: 4px;
+    min-height: 50px;
+}
+
+.track-label {
+    width: 80px;
+    flex-shrink: 0;
+    background-color: #2d2d2d;
+    color: #808080;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid #404040;
+    text-transform: uppercase;
+}
+
+.track-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    background-color: #252526;
+    min-width: 0;
+    position: relative;
+}
+
+/* タイムラインクリップ */
+.timeline-clip {
+    height: 42px;
+    min-width: 60px;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    color: #ffffff;
+    cursor: pointer;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: filter 0.15s, transform 0.1s;
+    position: relative;
+}
+
+.timeline-clip:hover {
+    filter: brightness(1.2);
+    transform: scaleY(1.05);
+    z-index: 10;
+}
+
+.timeline-clip.selected {
+    outline: 2px solid #ffffff;
+    outline-offset: 1px;
+}
+
+.timeline-clip .clip-title {
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.timeline-clip .clip-info {
+    font-size: 0.65rem;
+    opacity: 0.8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* トラック別カラー */
+.timeline-clip[data-track="text"] {
+    background: linear-gradient(135deg, #4ec9b0 0%, #3da890 100%);
+}
+
+.timeline-clip[data-track="image"] {
+    background: linear-gradient(135deg, #ce9178 0%, #b87a60 100%);
+}
+
+.timeline-clip[data-track="video"] {
+    background: linear-gradient(135deg, #c586c0 0%, #a56fa0 100%);
+}
+
+.timeline-clip[data-track="bgm"] {
+    background: linear-gradient(135deg, #6a9955 0%, #527a40 100%);
+}
+
+.timeline-clip[data-track="se"] {
+    background: linear-gradient(135deg, #dcdcaa 0%, #b8b888 100%);
+    color: #1e1e1e;
+}
+
+/* タイムライン空状態 */
+.timeline-empty {
+    color: #808080;
+    font-size: 0.85rem;
+    padding: 20px;
+    text-align: center;
+}
+
 .drop-zone {
     flex: 1;
+    min-height: 0;
     overflow: hidden;
-    position: relative;
 }
 
 .drop-zone.drag-over {
@@ -243,10 +415,10 @@ body {
 }
 
 .flowchart-container {
-    min-height: 100%;
-    min-width: 100%;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
     padding: 20px;
-    display: block;
     overflow: hidden;
     position: relative;
     background-color: #1a1a1a;
@@ -254,6 +426,7 @@ body {
         linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
     background-size: 20px 20px;
+    box-sizing: border-box;
 }
 
 .flowchart-container svg {

@@ -235,11 +235,17 @@ class FlowchartGenerator {
             const { svg } = await mermaid.render(svgId, mermaidCode);
             container.innerHTML = svg;
 
-            // SVGをスクロール可能にするためにスタイル調整
+            // SVGのスタイル調整
             const svgElement = container.querySelector('svg');
             if (svgElement) {
-                svgElement.style.maxWidth = 'none';
+                // viewBoxを削除して固定サイズにしない
+                svgElement.removeAttribute('width');
+                svgElement.removeAttribute('height');
+                svgElement.style.width = 'auto';
                 svgElement.style.height = 'auto';
+                svgElement.style.maxWidth = 'none';
+                svgElement.style.maxHeight = 'none';
+                svgElement.style.overflow = 'visible';
             }
 
             // ノードにクリックイベントを追加

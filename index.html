@@ -52,13 +52,51 @@
             </div>
         </aside>
 
-        <!-- 中央: フローチャート -->
+        <!-- 中央: フローチャート/タイムライン -->
         <section class="center-panel">
-            <div id="drop-zone" class="drop-zone">
-                <div id="flowchart-container" class="flowchart-container">
-                    <div class="drop-message">
-                        <p>dataフォルダをここにドロップ</p>
-                        <p>または「フォルダを選択」ボタンをクリック</p>
+            <!-- 表示切替タブ -->
+            <div class="view-tabs">
+                <button id="tab-flowchart" class="view-tab active">フローチャート</button>
+                <button id="tab-timeline" class="view-tab">タイムライン</button>
+            </div>
+
+            <!-- ビューコンテンツラッパー -->
+            <div class="view-content-wrapper">
+                <!-- フローチャートビュー -->
+                <div id="drop-zone" class="drop-zone view-content active">
+                    <div id="flowchart-container" class="flowchart-container">
+                        <div class="drop-message">
+                            <p>dataフォルダをここにドロップ</p>
+                            <p>または「フォルダを選択」ボタンをクリック</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- タイムラインビュー -->
+                <div id="timeline-view" class="timeline-view view-content">
+                    <div class="timeline-container" id="timeline-container">
+                        <div class="timeline-tracks">
+                            <div class="timeline-track" data-track="text">
+                                <div class="track-label">テキスト</div>
+                                <div class="track-content" id="track-text"></div>
+                            </div>
+                            <div class="timeline-track" data-track="image">
+                                <div class="track-label">画像</div>
+                                <div class="track-content" id="track-image"></div>
+                            </div>
+                            <div class="timeline-track" data-track="video">
+                                <div class="track-label">動画</div>
+                                <div class="track-content" id="track-video"></div>
+                            </div>
+                            <div class="timeline-track" data-track="bgm">
+                                <div class="track-label">BGM</div>
+                                <div class="track-content" id="track-bgm"></div>
+                            </div>
+                            <div class="timeline-track" data-track="se">
+                                <div class="track-label">SE</div>
+                                <div class="track-content" id="track-se"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
