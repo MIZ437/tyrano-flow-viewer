@@ -16,6 +16,10 @@
     <header class="header">
         <h1>TyranoFlow Viewer</h1>
         <div class="header-controls">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="検索..." />
+                <button id="search-btn" class="btn btn-secondary">検索</button>
+            </div>
             <button id="select-folder-btn" class="btn btn-primary">
                 フォルダを選択
             </button>
@@ -25,6 +29,18 @@
             <span id="status-message" class="status-message"></span>
         </div>
     </header>
+
+    <!-- 検索結果モーダル -->
+    <div id="search-modal" class="modal">
+        <div class="search-modal-content">
+            <div class="search-modal-header">
+                <h3>検索結果: <span id="search-query-display"></span></h3>
+                <button class="modal-close" id="search-modal-close">&times;</button>
+            </div>
+            <div class="search-modal-body" id="search-results">
+            </div>
+        </div>
+    </div>
 
     <!-- メインコンテンツ -->
     <main class="main-content">

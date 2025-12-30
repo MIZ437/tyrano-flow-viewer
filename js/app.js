@@ -139,6 +139,32 @@ class TyranoFlowApp {
         if (refreshBtn) {
             refreshBtn.addEventListener('click', () => this.refresh());
         }
+
+        // 検索ボタン
+        const searchBtn = document.getElementById('search-btn');
+        const searchInput = document.getElementById('search-input');
+        if (searchBtn && searchInput) {
+            searchBtn.addEventListener('click', () => this.performSearch());
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.performSearch();
+                }
+            });
+        }
+
+        // 検索モーダルを閉じる
+        const searchModalClose = document.getElementById('search-modal-close');
+        const searchModal = document.getElementById('search-modal');
+        if (searchModalClose && searchModal) {
+            searchModalClose.addEventListener('click', () => {
+                searchModal.classList.remove('active');
+            });
+            searchModal.addEventListener('click', (e) => {
+                if (e.target === searchModal) {
+                    searchModal.classList.remove('active');
+                }
+            });
+        }
     }
 
     /**
@@ -738,6 +764,151 @@ class TyranoFlowApp {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+
+    /**
+     * 検索を実行
+     */
+    performSearch() {
+        const searchInput = document.getElementById('search-input');
+        const query = searchInput.value.trim();
+
+        if (!query) {
+            this.showError('検索キーワードを入力してください');
+            return;
+        }
+
+        if (this.flowchart.parsedFiles.size === 0) {
+            this.showError('先にフォルダを読み込んでください');
+            return;
+        }
+
+        const results = this.searchInFiles(query);
+        this.showSearchResults(query, results);
+    }
+
+    /**
+     * 全ファイルを検索
+     */
+    searchInFiles(query) {
+        const results = [];
+        const lowerQuery = query.toLowerCase();
+
+        this.flowchart.parsedFiles.forEach((data, filename) => {
+            // セリフ・ナレーションを検索
+            if (data.dialogues) {
+                data.dialogues.forEach(dialogue => {
+                    if (dialogue.text.toLowerCase().includes(lowerQuery) ||
+                        (dialogue.speaker && dialogue.speaker.toLowerCase().includes(lowerQuery))) {
+                        results.push({
+                            filename: filename,
+                            type: 'dialogue',
+                            speaker: dialogue.speaker,
+                            text: dialogue.text,
+                            line: dialogue.line
+                        });
+                    }
+                });
+            }
+
+            // ラベルを検索
+            data.labels.forEach(label => {
+                if (label.name.toLowerCase().includes(lowerQuery)) {
+                    results.push({
+                        filename: filename,
+                        type: 'label',
+                        text: `*${label.name}`,
+                        line: label.line
+                    });
+                }
+            });
+
+            // ジャンプ先を検索
+            data.jumps.forEach(jump => {
+                const jumpText = `${jump.storage || ''} ${jump.target || ''}`;
+                if (jumpText.toLowerCase().includes(lowerQuery)) {
+                    results.push({
+                        filename: filename,
+                        type: 'jump',
+                        text: `[jump] → ${jump.storage || ''}${jump.target ? ' *' + jump.target : ''}`
+                    });
+                }
+            });
+
+            // 選択肢を検索
+            data.links.forEach(link => {
+                if ((link.text && link.text.toLowerCase().includes(lowerQuery)) ||
+                    (link.storage && link.storage.toLowerCase().includes(lowerQuery))) {
+                    results.push({
+                        filename: filename,
+                        type: 'link',
+                        text: `[${link.type}] ${link.text || ''} → ${link.storage || ''}`
+                    });
+                }
+            });
+        });
+
+        return results;
+    }
+
+    /**
+     * 検索結果を表示
+     */
+    showSearchResults(query, results) {
+        const modal = document.getElementById('search-modal');
+        const queryDisplay = document.getElementById('search-query-display');
+        const resultsContainer = document.getElementById('search-results');
+
+        if (!modal || !resultsContainer) return;
+
+        queryDisplay.textContent = `"${query}" (${results.length}件)`;
+
+        if (results.length === 0) {
+            resultsContainer.innerHTML = '<div class="search-no-results">検索結果がありません</div>';
+        } else {
+            let html = '';
+            results.forEach((result, index) => {
+                const highlightedText = this.highlightText(result.text, query);
+                html += `<div class="search-result-item" data-index="${index}" data-filename="${result.filename}">`;
+                html += `<div class="search-result-file">${result.filename}</div>`;
+                if (result.speaker !== undefined) {
+                    html += `<div class="search-result-speaker">${result.speaker || 'ナレーション'}</div>`;
+                }
+                html += `<div class="search-result-text">${highlightedText}</div>`;
+                html += `</div>`;
+            });
+            resultsContainer.innerHTML = html;
+
+            // クリックでファイル詳細を表示
+            resultsContainer.querySelectorAll('.search-result-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const filename = item.dataset.filename;
+                    const data = this.flowchart.parsedFiles.get(filename);
+                    if (data) {
+                        this.showFileDetails(filename, data);
+                        modal.classList.remove('active');
+                    }
+                });
+            });
+        }
+
+        modal.classList.add('active');
+    }
+
+    /**
+     * テキスト内のキーワードをハイライト
+     */
+    highlightText(text, query) {
+        const escaped = this.escapeHtml(text);
+        const regex = new RegExp(`(${this.escapeRegex(query)})`, 'gi');
+        return escaped.replace(regex, '<mark>$1</mark>');
+    }
+
+    /**
+     * 正規表現用エスケープ
+     */
+    escapeRegex(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 }
 
