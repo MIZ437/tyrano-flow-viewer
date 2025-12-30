@@ -315,6 +315,46 @@ body {
     color: #808080;
 }
 
+/* テキスト（セリフ・ナレーション）表示 */
+.dialogue-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.dialogue-item {
+    background-color: #2d2d2d;
+    border-radius: 4px;
+    padding: 8px;
+    border-left: 3px solid #0e639c;
+}
+
+.dialogue-speaker {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #4ec9b0;
+    margin-bottom: 4px;
+}
+
+.dialogue-narrator {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #808080;
+    font-style: italic;
+    margin-bottom: 4px;
+}
+
+.dialogue-text {
+    display: block;
+    font-size: 0.8rem;
+    color: #d4d4d4;
+    line-height: 1.5;
+}
+
 /* プレースホルダー */
 .placeholder {
     color: #808080;

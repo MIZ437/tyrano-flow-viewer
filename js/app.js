@@ -434,6 +434,20 @@ class TyranoFlowApp {
             html += '</div></div>';
         }
 
+        // テキスト（セリフ・ナレーション）
+        if (data.dialogues && data.dialogues.length > 0) {
+            html += '<div class="section"><h4>テキスト</h4><div class="dialogue-list">';
+            for (const dialogue of data.dialogues) {
+                const speakerClass = dialogue.speaker ? 'dialogue-speaker' : 'dialogue-narrator';
+                const speakerName = dialogue.speaker || 'ナレーション';
+                html += `<div class="dialogue-item">`;
+                html += `<span class="${speakerClass}">${this.escapeHtml(speakerName)}</span>`;
+                html += `<span class="dialogue-text">${this.escapeHtml(dialogue.text)}</span>`;
+                html += `</div>`;
+            }
+            html += '</div></div>';
+        }
+
         container.innerHTML = html;
 
         // ハイライト
@@ -689,6 +703,15 @@ class TyranoFlowApp {
             status.textContent = message;
             status.classList.remove('error');
         }
+    }
+
+    /**
+     * HTMLエスケープ
+     */
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 

@@ -32,7 +32,8 @@ class TyranoParser {
             videos: this.extractVideos(cleanedContent),
             audio: this.extractAudio(cleanedContent),
             clickCount: this.countClicks(cleanedContent),
-            links: this.extractLinks(cleanedContent)
+            links: this.extractLinks(cleanedContent),
+            dialogues: this.extractDialogues(cleanedContent)
         };
     }
 
@@ -378,6 +379,72 @@ class TyranoParser {
         const pCount = (content.match(/\[p\]/gi) || []).length;
         const lCount = (content.match(/\[l\]/gi) || []).length;
         return pCount + lCount;
+    }
+
+    /**
+     * セリフ・ナレーションを抽出
+     */
+    extractDialogues(content) {
+        const dialogues = [];
+        const lines = content.split('\n');
+
+        let currentSpeaker = null;
+        let currentText = [];
+        let lineNumber = 0;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            lineNumber = i + 1;
+
+            // 空行はスキップ
+            if (!line) continue;
+
+            // ラベル行はスキップ
+            if (line.startsWith('*')) continue;
+
+            // タグのみの行はスキップ（ただしテキスト中のタグは除去して処理）
+            if (line.startsWith('[') && line.endsWith(']')) continue;
+            if (line.startsWith('@')) continue;
+
+            // 話者指定行 (#キャラ名 または #キャラ名:表情)
+            if (line.startsWith('#')) {
+                // 前のセリフを保存
+                if (currentText.length > 0) {
+                    dialogues.push({
+                        speaker: currentSpeaker,
+                        text: currentText.join(''),
+                        line: lineNumber - currentText.length
+                    });
+                    currentText = [];
+                }
+
+                // 新しい話者を設定
+                const speakerPart = line.substring(1).split(':')[0].trim();
+                currentSpeaker = speakerPart || null; // 空の場合はナレーション
+                continue;
+            }
+
+            // テキスト行
+            // タグを除去してテキストのみ抽出
+            let textContent = line
+                .replace(/\[[^\]]*\]/g, '') // タグを除去
+                .replace(/^\s+|\s+$/g, ''); // 前後の空白を除去
+
+            if (textContent) {
+                currentText.push(textContent);
+            }
+        }
+
+        // 最後のセリフを保存
+        if (currentText.length > 0) {
+            dialogues.push({
+                speaker: currentSpeaker,
+                text: currentText.join(''),
+                line: lineNumber - currentText.length + 1
+            });
+        }
+
+        return dialogues;
     }
 }
 
