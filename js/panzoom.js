@@ -190,24 +190,27 @@ class PanZoomController {
 
     /**
      * ホイール（ズーム）
+     * コンテナの中央を基準にズーム（水平位置を固定）
      */
     onWheel(e) {
         e.preventDefault();
 
         const rect = this.container.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
+
+        // ズームの中心点：水平はコンテナ中央、垂直はマウス位置
+        const centerX = rect.width / 2;
         const mouseY = e.clientY - rect.top;
 
-        // ズーム前のマウス位置（SVG座標系）
-        const svgX = (mouseX - this.translateX) / this.scale;
+        // ズーム前の中心位置（SVG座標系）
+        const svgX = (centerX - this.translateX) / this.scale;
         const svgY = (mouseY - this.translateY) / this.scale;
 
         // スケール更新
         const delta = -e.deltaY * this.zoomSensitivity;
         const newScale = Math.min(Math.max(this.scale * (1 + delta), this.minScale), this.maxScale);
 
-        // マウス位置を中心にズーム
-        this.translateX = mouseX - svgX * newScale;
+        // コンテナ中央を基準にズーム（水平位置固定）
+        this.translateX = centerX - svgX * newScale;
         this.translateY = mouseY - svgY * newScale;
         this.scale = newScale;
 
