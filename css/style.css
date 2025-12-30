@@ -1,0 +1,588 @@
+/* ========================================
+   TyranoFlow Viewer - Stylesheet
+   ======================================== */
+
+/* リセット・基本設定 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ========================================
+   ヘッダー
+   ======================================== */
+.header {
+    background-color: #2d2d2d;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid #404040;
+}
+
+.header h1 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* ボタン */
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #0e639c;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1177bb;
+}
+
+.btn-secondary {
+    background-color: #3c3c3c;
+    color: #d4d4d4;
+}
+
+.btn-secondary:hover {
+    background-color: #4c4c4c;
+}
+
+/* ステータスメッセージ */
+.status-message {
+    font-size: 0.85rem;
+    color: #9cdcfe;
+}
+
+.status-message.error {
+    color: #f48771;
+}
+
+/* ========================================
+   メインコンテンツ
+   ======================================== */
+.main-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+}
+
+/* 左パネル: ファイル一覧 */
+.left-panel {
+    width: 400px;
+    background-color: #252526;
+    border-right: 1px solid #404040;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.left-panel h2,
+.right-panel h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #808080;
+    padding: 12px 16px;
+    border-bottom: 1px solid #404040;
+}
+
+.file-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+    overscroll-behavior: contain;
+}
+
+/* ファイルテーブル */
+.file-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+}
+
+.file-table th {
+    text-align: left;
+    padding: 8px 6px;
+    background-color: #2d2d2d;
+    color: #808080;
+    font-weight: 500;
+    border-bottom: 1px solid #404040;
+    position: sticky;
+    top: 0;
+    white-space: nowrap;
+}
+
+.file-table td {
+    padding: 6px;
+    border-bottom: 1px solid #333333;
+}
+
+.file-row {
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.file-row:hover {
+    background-color: #2a2d2e;
+}
+
+.file-row.selected {
+    background-color: #094771;
+}
+
+/* ストーリーファイル */
+.file-row.story-file td:first-child {
+    color: #4ec9b0;
+}
+
+/* システムファイル（薄く表示） */
+.file-row.system-file {
+    opacity: 0.5;
+}
+
+.file-row.system-file td:first-child {
+    color: #808080;
+}
+
+/* ファイル区切り */
+.file-separator {
+    background-color: #1e1e1e;
+    border-top: 1px solid #404040;
+}
+
+.file-separator td {
+    text-align: center;
+    color: #606060;
+    font-size: 0.7rem;
+    padding: 4px 0 !important;
+}
+
+/* 中央パネル: フローチャート */
+.center-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.drop-zone {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+.drop-zone.drag-over {
+    background-color: rgba(14, 99, 156, 0.2);
+}
+
+.drop-zone.drag-over::after {
+    content: 'ドロップしてください';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.5rem;
+    color: #0e639c;
+    pointer-events: none;
+}
+
+.flowchart-container {
+    min-height: 100%;
+    min-width: 100%;
+    padding: 20px;
+    display: block;
+    overflow: hidden;
+    position: relative;
+    background-color: #1a1a1a;
+    background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+.flowchart-container svg {
+    display: block;
+    cursor: grab;
+    transform-origin: 0 0;
+}
+
+.flowchart-container svg:active {
+    cursor: grabbing;
+}
+
+.drop-message {
+    text-align: center;
+    color: #808080;
+}
+
+.drop-message p {
+    margin: 8px 0;
+}
+
+.drop-message p:first-child {
+    font-size: 1.2rem;
+}
+
+/* 右パネル: ファイル詳細 */
+.right-panel {
+    width: 320px;
+    background-color: #252526;
+    border-left: 1px solid #404040;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+}
+
+.file-details {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px;
+    overscroll-behavior: contain;
+}
+
+.file-details h3 {
+    font-size: 1rem;
+    color: #ffffff;
+    margin-bottom: 8px;
+    word-break: break-all;
+}
+
+.file-details .click-count {
+    font-size: 0.9rem;
+    color: #4ec9b0;
+    margin-bottom: 16px;
+}
+
+.file-details .section {
+    margin-bottom: 16px;
+}
+
+.file-details .section h4 {
+    font-size: 0.85rem;
+    color: #dcdcaa;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #404040;
+}
+
+.file-details ul {
+    list-style: none;
+    font-size: 0.8rem;
+}
+
+.file-details li {
+    padding: 4px 0;
+    color: #9cdcfe;
+    word-break: break-all;
+}
+
+.file-details li::before {
+    content: '• ';
+    color: #808080;
+}
+
+/* プレースホルダー */
+.placeholder {
+    color: #808080;
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 20px;
+}
+
+/* ========================================
+   ローディング
+   ======================================== */
+.loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #404040;
+    border-top-color: #0e639c;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.loading p {
+    margin-top: 16px;
+    color: #d4d4d4;
+}
+
+/* ========================================
+   エラー表示
+   ======================================== */
+.error {
+    background-color: #5a1d1d;
+    color: #f48771;
+    padding: 16px;
+    border-radius: 4px;
+    font-family: monospace;
+    white-space: pre-wrap;
+    overflow: auto;
+}
+
+/* ========================================
+   Mermaid フローチャートのカスタマイズ
+   ======================================== */
+.flowchart-container .node rect {
+    cursor: pointer;
+}
+
+.flowchart-container .node:hover rect {
+    filter: brightness(1.2);
+}
+
+/* ========================================
+   スクロールバー
+   ======================================== */
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #424242;
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #4f4f4f;
+}
+
+/* ========================================
+   レスポンシブ
+   ======================================== */
+@media (max-width: 1200px) {
+    .left-panel {
+        width: 360px;
+    }
+    .right-panel {
+        width: 260px;
+    }
+}
+
+@media (max-width: 900px) {
+    .main-content {
+        flex-direction: column;
+    }
+    .left-panel,
+    .right-panel {
+        width: 100%;
+        height: 200px;
+        border: none;
+        border-bottom: 1px solid #404040;
+    }
+    .center-panel {
+        flex: 1;
+    }
+}
+
+/* ========================================
+   リソースプレビュー
+   ======================================== */
+.resource-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.resource-item {
+    background-color: #2d2d2d;
+    border-radius: 4px;
+    padding: 8px;
+    border: 1px solid #404040;
+}
+
+.resource-item:hover {
+    border-color: #0e639c;
+}
+
+.resource-name {
+    font-size: 0.75rem;
+    color: #9cdcfe;
+    margin-bottom: 6px;
+    word-break: break-all;
+}
+
+.resource-info {
+    font-size: 0.7rem;
+    color: #808080;
+    margin-top: 6px;
+    word-break: break-all;
+}
+
+.resource-preview {
+    margin-bottom: 4px;
+}
+
+/* 画像プレビュー */
+.preview-image {
+    width: 100%;
+    max-height: 120px;
+    object-fit: contain;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    background-color: #1e1e1e;
+}
+
+.preview-image:hover {
+    opacity: 0.85;
+}
+
+/* 音声プレビュー */
+.preview-audio {
+    width: 100%;
+    height: 36px;
+    border-radius: 4px;
+}
+
+.preview-audio::-webkit-media-controls-panel {
+    background-color: #3c3c3c;
+}
+
+/* 動画プレビュー */
+.preview-video {
+    width: 100%;
+    max-height: 150px;
+    border-radius: 4px;
+    background-color: #000;
+}
+
+/* プレビュー不可 */
+.no-preview {
+    font-size: 0.7rem;
+    color: #808080;
+    font-style: italic;
+    padding: 8px;
+    text-align: center;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+}
+
+/* ========================================
+   画像モーダル（拡大表示）
+   ======================================== */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal.active {
+    display: flex;
+}
+
+.modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.modal-close {
+    position: absolute;
+    top: 20px;
+    right: 30px;
+    font-size: 2rem;
+    color: #ffffff;
+    cursor: pointer;
+    transition: color 0.2s;
+    background: none;
+    border: none;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #f48771;
+}
+
+.modal-filename {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #d4d4d4;
+    font-size: 0.9rem;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+
+/* ========================================
+   セクション内リソース表示の調整
+   ======================================== */
+.file-details .section .resource-list {
+    margin-top: 8px;
+}
+
+.file-details .section h4 .resource-count {
+    font-weight: normal;
+    color: #808080;
+    font-size: 0.8rem;
+}

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TyranoFlow Viewer</title>
+
+    <!-- Mermaid.js (CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+    <!-- スタイル -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- ヘッダー -->
+    <header class="header">
+        <h1>TyranoFlow Viewer</h1>
+        <div class="header-controls">
+            <button id="select-folder-btn" class="btn btn-primary">
+                フォルダを選択
+            </button>
+            <button id="refresh-btn" class="btn btn-secondary">
+                更新
+            </button>
+            <span id="status-message" class="status-message"></span>
+        </div>
+    </header>
+
+    <!-- メインコンテンツ -->
+    <main class="main-content">
+        <!-- 左パネル: ファイル一覧 -->
+        <aside class="left-panel">
+            <h2>ファイル一覧</h2>
+            <div id="file-list" class="file-list">
+                <p class="placeholder">フォルダを選択またはドロップしてください</p>
+            </div>
+        </aside>
+
+        <!-- 中央: フローチャート -->
+        <section class="center-panel">
+            <div id="drop-zone" class="drop-zone">
+                <div id="flowchart-container" class="flowchart-container">
+                    <div class="drop-message">
+                        <p>dataフォルダをここにドロップ</p>
+                        <p>または「フォルダを選択」ボタンをクリック</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 右パネル: ファイル詳細 -->
+        <aside class="right-panel">
+            <h2>ファイル詳細</h2>
+            <div id="file-details" class="file-details">
+                <p class="placeholder">ファイルを選択してください</p>
+            </div>
+        </aside>
+    </main>
+
+    <!-- 画像モーダル -->
+    <div id="image-modal" class="modal">
+        <button class="modal-close">&times;</button>
+        <img class="modal-content" id="modal-image" src="" alt="">
+        <div class="modal-filename" id="modal-filename"></div>
+    </div>
+
+    <!-- ローディング -->
+    <div id="loading" class="loading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>読み込み中...</p>
+    </div>
+
+    <!-- スクリプト -->
+    <script src="js/parser.js"></script>
+    <script src="js/flowchart.js"></script>
+    <script src="js/panzoom.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
