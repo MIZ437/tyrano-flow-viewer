@@ -61,6 +61,32 @@ class TyranoFlowApp {
         const fileDetails = document.getElementById('file-details');
 
         const handleWheel = (e) => {
+            // ネストされたスクロール可能な要素をチェック
+            const target = e.target;
+            const scrollableParent = target.closest('.dialogue-list, .resource-list');
+
+            if (scrollableParent) {
+                // ネストされたスクロール要素内の場合
+                const scrollTop = scrollableParent.scrollTop;
+                const scrollHeight = scrollableParent.scrollHeight;
+                const clientHeight = scrollableParent.clientHeight;
+                const hasScroll = scrollHeight > clientHeight;
+
+                if (hasScroll) {
+                    // スクロール可能な場合は伝播を止めてデフォルト動作を許可
+                    e.stopPropagation();
+
+                    // 境界チェック
+                    if (scrollTop <= 0 && e.deltaY < 0) {
+                        e.preventDefault();
+                    } else if (scrollTop + clientHeight >= scrollHeight - 1 && e.deltaY > 0) {
+                        e.preventDefault();
+                    }
+                    return;
+                }
+            }
+
+            // 通常のパネルスクロール処理
             const element = e.currentTarget;
             const scrollTop = element.scrollTop;
             const scrollHeight = element.scrollHeight;
