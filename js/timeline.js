@@ -62,7 +62,8 @@ class TimelineProcessor {
         let currentSpeaker = null;
         let textBuffer = [];
         let textStartTime = this.currentTime;
-        let passedFirstJump = false; // 最初のjump後のラベルは別分岐として扱う
+        let hasExternalJump = false; // 外部ファイルへのjumpがあったか
+        let passedJumpAndStop = false; // jump+[s]の後か
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
@@ -71,18 +72,33 @@ class TimelineProcessor {
             // コメント行をスキップ
             if (trimmedLine.startsWith(';')) continue;
 
-            // [s]タグ（スクリプト停止）に遭遇したら、次のjumpまでの処理を終了
-            // ただし、ゲーム開始時の分岐（タイトル画面など）では複数の[s]がある
+            // [jump storage="xxx.ks"] を検出（外部ファイルへのジャンプ）
+            const jumpMatch = trimmedLine.match(/\[jump[^\]]*storage\s*=\s*["']?([^"'\]\s]+)/i);
+            if (jumpMatch && jumpMatch[1] && jumpMatch[1].endsWith('.ks')) {
+                hasExternalJump = true;
+            }
+            // @jump storage=xxx.ks の形式も検出
+            if (trimmedLine.startsWith('@jump') && trimmedLine.includes('storage=')) {
+                const atJumpMatch = trimmedLine.match(/storage\s*=\s*["']?([^"'\s]+)/i);
+                if (atJumpMatch && atJumpMatch[1] && atJumpMatch[1].endsWith('.ks')) {
+                    hasExternalJump = true;
+                }
+            }
+
+            // [s]タグ（スクリプト停止）
             if (trimmedLine === '[s]' || trimmedLine.startsWith('[s ')) {
-                passedFirstJump = true;
+                // 外部ファイルへのジャンプ後の[s]なら、以降は別分岐
+                if (hasExternalJump) {
+                    passedJumpAndStop = true;
+                }
                 continue;
             }
 
-            // 最初の[s]後のラベル行は別分岐なのでスキップ開始
+            // ラベル行の処理
             if (trimmedLine.startsWith('*')) {
-                if (passedFirstJump) {
-                    // [s]後のラベル = 別の選択肢からの分岐
-                    // このラベル以降は処理しない（次のファイルに進む）
+                if (passedJumpAndStop) {
+                    // jump+[s]後のラベル = 別の選択肢からの分岐
+                    // このラベル以降は処理しない
                     break;
                 }
                 continue;
@@ -90,10 +106,13 @@ class TimelineProcessor {
 
             // @形式のコマンドを処理
             if (trimmedLine.startsWith('@')) {
-                // @s（スクリプト停止）の場合も同様に処理
                 const atCommand = trimmedLine.substring(1).trim().split(/\s+/)[0].toLowerCase();
+
+                // @s（スクリプト停止）の場合
                 if (atCommand === 's') {
-                    passedFirstJump = true;
+                    if (hasExternalJump) {
+                        passedJumpAndStop = true;
+                    }
                     continue;
                 }
 
