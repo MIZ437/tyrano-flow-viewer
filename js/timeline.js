@@ -244,6 +244,11 @@ class TimelineProcessor {
                 params[paramMatch[1]] = paramMatch[2] || paramMatch[3] || paramMatch[4];
             }
 
+            // デバッグ: video/movieタグの解析結果を確認
+            if (tagName === 'video' || tagName === 'movie' || tagName === 'bgmovie') {
+                console.log(`[DEBUG] Tag parsed: tagName=${tagName}, tagContent="${tagContent}", params=`, params);
+            }
+
             this.processCommand(tagName, params, filename, lineNum);
             lastIndex = match.index + match[0].length;
         }
@@ -438,6 +443,8 @@ class TimelineProcessor {
      * - [video]: 非ブロッキング（wait_video まで継続）
      */
     processVideo(command, params, filename, lineNum) {
+        console.log(`[DEBUG] processVideo called: command=${command}, storage=${params.storage}, params=`, params);
+
         // 前の動画があれば終了
         if (this.activeVideo) {
             this.activeVideo.endTime = this.currentTime;
