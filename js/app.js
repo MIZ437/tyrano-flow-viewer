@@ -206,6 +206,16 @@ class TyranoFlowApp {
             });
         }
 
+        // タイムライン上でマウスホイールによるズーム
+        const timelinePanel = document.getElementById('timeline-panel');
+        if (timelinePanel) {
+            timelinePanel.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY > 0 ? -25 : 25;
+                this.setZoom(this.timelineZoom + delta);
+            }, { passive: false });
+        }
+
         // キーボードナビゲーション
         document.addEventListener('keydown', (e) => {
             // タイムラインビューがアクティブでない場合は無視
