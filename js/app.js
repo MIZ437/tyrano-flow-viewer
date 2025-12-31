@@ -641,45 +641,54 @@ class TyranoFlowApp {
      */
     setupDragAndDrop() {
         const dropZone = document.getElementById('drop-zone');
+        const self = this;
 
-        // ドキュメント全体でドラッグオーバーを防止（ブラウザのデフォルト動作を阻止）
-        document.addEventListener('dragover', (e) => {
+        // デフォルト動作を阻止する関数
+        const preventDefaults = (e) => {
             e.preventDefault();
             e.stopPropagation();
+        };
+
+        // 全てのドラッグイベントでデフォルト動作を阻止（captureフェーズで最優先処理）
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            window.addEventListener(eventName, preventDefaults, { capture: true });
+            document.body.addEventListener(eventName, preventDefaults, { capture: true });
         });
 
-        document.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (dropZone) dropZone.classList.remove('drag-over');
-        });
-
-        document.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+        // ドロップ処理（captureフェーズで処理）
+        window.addEventListener('drop', async function(e) {
             if (dropZone) dropZone.classList.remove('drag-over');
 
             const items = e.dataTransfer.items;
-            if (items.length > 0) {
+            if (items && items.length > 0) {
                 const item = items[0];
                 if (item.kind === 'file') {
-                    const handle = await item.getAsFileSystemHandle();
-                    if (handle.kind === 'directory') {
-                        await this.loadFromDirectoryHandle(handle);
-                    } else {
-                        this.showError('フォルダをドロップしてください');
+                    try {
+                        const handle = await item.getAsFileSystemHandle();
+                        if (handle.kind === 'directory') {
+                            await self.loadFromDirectoryHandle(handle);
+                        } else {
+                            self.showError('フォルダをドロップしてください');
+                        }
+                    } catch (error) {
+                        console.error('Drop error:', error);
+                        self.showError('ドロップ処理でエラーが発生しました');
                     }
                 }
             }
-        });
+        }, { capture: true });
 
-        // ドロップゾーンのビジュアル効果
-        if (dropZone) {
-            dropZone.addEventListener('dragenter', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('drag-over');
-            });
-        }
+        // ドラッグ中のビジュアルフィードバック
+        window.addEventListener('dragenter', (e) => {
+            if (dropZone) dropZone.classList.add('drag-over');
+        }, { capture: true });
+
+        window.addEventListener('dragleave', (e) => {
+            // ウィンドウ外に出た時のみクラスを削除
+            if (!e.relatedTarget || e.relatedTarget.nodeName === 'HTML') {
+                if (dropZone) dropZone.classList.remove('drag-over');
+            }
+        }, { capture: true });
     }
 
     /**
