@@ -26,6 +26,7 @@ class TimelineProcessor {
         this.activeImages = new Map(); // layer -> event
         this.activeCharas = new Map(); // name -> event
         this.activeBg = null;
+        this.activeVideo = null; // アクティブな動画
     }
 
     /**
@@ -48,6 +49,7 @@ class TimelineProcessor {
         this.activeImages.clear();
         this.activeCharas.clear();
         this.activeBg = null;
+        this.activeVideo = null;
     }
 
     /**
@@ -249,6 +251,12 @@ class TimelineProcessor {
             case 'bgmovie':
                 this.processVideo(command, params, filename, lineNum);
                 break;
+            case 'wait_video':
+                this.processWaitVideo(filename, lineNum);
+                break;
+            case 'free_video':
+                this.processFreeVideo(filename, lineNum);
+                break;
 
             // BGM
             case 'playbgm':
@@ -386,19 +394,60 @@ class TimelineProcessor {
 
     /**
      * 動画を処理
+     * - [movie] / [bgmovie]: ブロッキング呼び出し（その場で完結）
+     * - [video]: 非ブロッキング（wait_video まで継続）
      */
     processVideo(command, params, filename, lineNum) {
+        // 前の動画があれば終了
+        if (this.activeVideo) {
+            this.activeVideo.endTime = this.currentTime;
+            this.activeVideo = null;
+        }
+
         const event = {
             type: 'video',
             command: command,
             storage: params.storage,
             startTime: this.currentTime,
-            endTime: this.currentTime + 1, // 動画は1単位とする（wait_videoまで）
+            endTime: null,
             filename: filename,
             line: lineNum
         };
         this.tracks.video.push(event);
         this.events.push(event);
+
+        // [movie] と [bgmovie] はブロッキング呼び出し
+        // 動画再生が終わってから次に進むので、その場で完結させる
+        if (command === 'movie' || command === 'bgmovie') {
+            // 動画の長さは不明なので、次のイベントまでの時間で決まる
+            // ここでは仮に現在時間で終了とし、次の[p]等で更新される
+            event.endTime = this.currentTime;
+            // activeVideoには設定しない（ブロッキングなのでwait不要）
+        } else {
+            // [video] は非ブロッキング、wait_video まで継続
+            this.activeVideo = event;
+        }
+    }
+
+    /**
+     * 動画待機を処理（wait_video）
+     * 動画再生完了を待つ - ここで動画の終了時間を設定
+     */
+    processWaitVideo(filename, lineNum) {
+        if (this.activeVideo) {
+            this.activeVideo.endTime = this.currentTime;
+            this.activeVideo = null;
+        }
+    }
+
+    /**
+     * 動画解放を処理（free_video）
+     */
+    processFreeVideo(filename, lineNum) {
+        if (this.activeVideo) {
+            this.activeVideo.endTime = this.currentTime;
+            this.activeVideo = null;
+        }
     }
 
     /**
@@ -483,6 +532,9 @@ class TimelineProcessor {
         }
         if (this.activeBg) {
             this.activeBg.endTime = this.totalTime;
+        }
+        if (this.activeVideo) {
+            this.activeVideo.endTime = this.totalTime;
         }
         this.activeImages.forEach(event => {
             if (!event.endTime) event.endTime = this.totalTime;
