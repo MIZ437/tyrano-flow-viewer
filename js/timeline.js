@@ -71,6 +71,8 @@ class TimelineProcessor {
         let textStartTime = this.currentTime;
         let hasExternalJump = false; // 外部ファイルへのjumpがあったか
         let passedJumpAndStop = false; // jump+[s]の後か
+        let hasVisualContent = false; // 視覚的コンテンツが表示されたか
+        let firstCmSkipped = false; // 最初の[cm]をスキップしたか
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
@@ -134,14 +136,22 @@ class TimelineProcessor {
                     }
                     this.currentTime += 1;
                     textStartTime = this.currentTime;
+                    hasVisualContent = true;
                 } else if (atCommand === 'l') {
                     this.currentTime += 1;
+                    hasVisualContent = true;
                 } else if (atCommand === 'cm') {
                     if (textBuffer.length > 0) {
                         this.addTextEvent(currentSpeaker, textBuffer.join(''), textStartTime, this.currentTime + 1, filename);
                         textBuffer = [];
+                        hasVisualContent = true;
                     }
-                    this.currentTime += 1;
+                    // ファイル冒頭の@cmは時間を進めない（セットアップ用）
+                    if (hasVisualContent || firstCmSkipped) {
+                        this.currentTime += 1;
+                    } else {
+                        firstCmSkipped = true;
+                    }
                     textStartTime = this.currentTime;
                 }
                 continue;
@@ -174,12 +184,14 @@ class TimelineProcessor {
                 }
                 this.currentTime += pMatches.length;
                 textStartTime = this.currentTime;
+                hasVisualContent = true;
             }
 
             // [l]タグも時間を進める（クリック待ち）
             const lMatches = trimmedLine.match(/\[l(?:\s[^\]]*)?]/gi);
             if (lMatches) {
                 this.currentTime += lMatches.length;
+                hasVisualContent = true;
             }
 
             // [cm]タグも時間を進める（メッセージクリア）
@@ -189,8 +201,14 @@ class TimelineProcessor {
                 if (textBuffer.length > 0) {
                     this.addTextEvent(currentSpeaker, textBuffer.join(''), textStartTime, this.currentTime + 1, filename);
                     textBuffer = [];
+                    hasVisualContent = true;
                 }
-                this.currentTime += cmMatches.length;
+                // ファイル冒頭の[cm]は時間を進めない（セットアップ用）
+                if (hasVisualContent || firstCmSkipped) {
+                    this.currentTime += cmMatches.length;
+                } else {
+                    firstCmSkipped = true;
+                }
                 textStartTime = this.currentTime;
             }
 
