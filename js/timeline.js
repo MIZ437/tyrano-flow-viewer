@@ -62,6 +62,7 @@ class TimelineProcessor {
         let currentSpeaker = null;
         let textBuffer = [];
         let textStartTime = this.currentTime;
+        let passedFirstJump = false; // 最初のjump後のラベルは別分岐として扱う
 
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
@@ -70,15 +71,35 @@ class TimelineProcessor {
             // コメント行をスキップ
             if (trimmedLine.startsWith(';')) continue;
 
-            // ラベル行をスキップ
-            if (trimmedLine.startsWith('*')) continue;
+            // [s]タグ（スクリプト停止）に遭遇したら、次のjumpまでの処理を終了
+            // ただし、ゲーム開始時の分岐（タイトル画面など）では複数の[s]がある
+            if (trimmedLine === '[s]' || trimmedLine.startsWith('[s ')) {
+                passedFirstJump = true;
+                continue;
+            }
+
+            // 最初の[s]後のラベル行は別分岐なのでスキップ開始
+            if (trimmedLine.startsWith('*')) {
+                if (passedFirstJump) {
+                    // [s]後のラベル = 別の選択肢からの分岐
+                    // このラベル以降は処理しない（次のファイルに進む）
+                    break;
+                }
+                continue;
+            }
 
             // @形式のコマンドを処理
             if (trimmedLine.startsWith('@')) {
+                // @s（スクリプト停止）の場合も同様に処理
+                const atCommand = trimmedLine.substring(1).trim().split(/\s+/)[0].toLowerCase();
+                if (atCommand === 's') {
+                    passedFirstJump = true;
+                    continue;
+                }
+
                 this.processAtCommand(trimmedLine, filename, i + 1);
 
                 // @p, @l, @cm も時間を進める
-                const atCommand = trimmedLine.substring(1).trim().split(/\s+/)[0].toLowerCase();
                 if (atCommand === 'p') {
                     // テキストバッファをフラッシュ
                     if (textBuffer.length > 0) {
