@@ -207,7 +207,6 @@ class TyranoFlowApp {
         }
 
         // タイムライン上でマウスホイールによるズーム
-        const timelinePanel = document.getElementById('timeline-panel');
         if (timelinePanel) {
             timelinePanel.addEventListener('wheel', (e) => {
                 e.preventDefault();
