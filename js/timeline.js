@@ -58,6 +58,13 @@ class TimelineProcessor {
      * @param {string} filename - ファイル名
      */
     processFile(content, filename) {
+        // 前のファイルからのアクティブな動画があれば終了させる
+        // （[movie]はブロッキングなので、次のファイル開始時点で終了）
+        if (this.activeVideo) {
+            this.activeVideo.endTime = this.currentTime;
+            this.activeVideo = null;
+        }
+
         const lines = content.split('\n');
         let currentSpeaker = null;
         let textBuffer = [];
@@ -242,11 +249,6 @@ class TimelineProcessor {
             let paramMatch;
             while ((paramMatch = paramPattern.exec(tagContent)) !== null) {
                 params[paramMatch[1]] = paramMatch[2] || paramMatch[3] || paramMatch[4];
-            }
-
-            // デバッグ: video/movieタグの解析結果を確認
-            if (tagName === 'video' || tagName === 'movie' || tagName === 'bgmovie') {
-                console.log(`[DEBUG] Tag parsed: tagName=${tagName}, tagContent="${tagContent}", params=`, params);
             }
 
             this.processCommand(tagName, params, filename, lineNum);
@@ -443,8 +445,6 @@ class TimelineProcessor {
      * - [video]: 非ブロッキング（wait_video まで継続）
      */
     processVideo(command, params, filename, lineNum) {
-        console.log(`[DEBUG] processVideo called: command=${command}, storage=${params.storage}, params=`, params);
-
         // 前の動画があれば終了
         if (this.activeVideo) {
             this.activeVideo.endTime = this.currentTime;
@@ -464,12 +464,12 @@ class TimelineProcessor {
         this.events.push(event);
 
         // [movie] と [bgmovie] はブロッキング呼び出し
-        // 動画再生が終わってから次に進むので、その場で完結させる
+        // 動画再生が終わってから次に進むので、時間を1単位進める
         if (command === 'movie' || command === 'bgmovie') {
-            // 動画の長さは不明なので、次のイベントまでの時間で決まる
-            // ここでは仮に現在時間で終了とし、次の[p]等で更新される
+            // 動画再生には時間がかかるので、最低1単位進める
+            this.currentTime += 1;
             event.endTime = this.currentTime;
-            // activeVideoには設定しない（ブロッキングなのでwait不要）
+            // ブロッキングなのでactiveVideoには設定しない
         } else {
             // [video] は非ブロッキング、wait_video まで継続
             this.activeVideo = event;
