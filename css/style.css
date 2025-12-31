@@ -716,6 +716,14 @@ body {
     outline-offset: 1px;
 }
 
+/* 再生ヘッド位置のクリップをハイライト */
+.timeline-clip.playhead-active {
+    outline: 2px solid #ffcc00;
+    outline-offset: 1px;
+    box-shadow: 0 0 12px rgba(255, 204, 0, 0.6);
+    z-index: 15;
+}
+
 .timeline-clip .clip-name {
     overflow: hidden;
     text-overflow: ellipsis;

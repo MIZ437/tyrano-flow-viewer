@@ -305,12 +305,42 @@ class TyranoFlowApp {
         this.playheadTime = time;
         this.updatePlayheadVisual();
         this.updatePreviewAtTime(time);
+        this.highlightClipAtPlayhead(time);
 
         // プレビュー時間表示を更新
         const previewTime = document.getElementById('preview-time');
         if (previewTime) {
             previewTime.textContent = `[${Math.floor(time)}p]`;
         }
+    }
+
+    /**
+     * 再生ヘッド位置のクリップをハイライト
+     */
+    highlightClipAtPlayhead(time) {
+        // 選択トラックがない場合は何もしない
+        if (!this.selectedTrackId) return;
+
+        // 全クリップのハイライトを解除
+        document.querySelectorAll('.timeline-clip.playhead-active').forEach(clip => {
+            clip.classList.remove('playhead-active');
+        });
+
+        // 選択中のトラックを取得
+        const trackEl = document.querySelector(`.timeline-track[data-track-id="${this.selectedTrackId}"]`);
+        if (!trackEl) return;
+
+        // そのトラック内のクリップをチェック
+        const clips = trackEl.querySelectorAll('.timeline-clip');
+        clips.forEach(clip => {
+            const startTime = parseFloat(clip.dataset.startTime) || 0;
+            const endTime = parseFloat(clip.dataset.endTime) || 0;
+
+            // 再生ヘッドがこのクリップの範囲内にあるか
+            if (time >= startTime && time < endTime) {
+                clip.classList.add('playhead-active');
+            }
+        });
     }
 
     /**
