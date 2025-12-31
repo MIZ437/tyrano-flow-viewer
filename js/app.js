@@ -640,25 +640,23 @@ class TyranoFlowApp {
      * ドラッグ&ドロップのセットアップ
      */
     setupDragAndDrop() {
-        // フローチャートビュー用のドロップゾーン
         const dropZone = document.getElementById('drop-zone');
-        // タイムラインビュー用
-        const timelineView = document.getElementById('timeline-view');
-        // 中央パネル全体
-        const centerPanel = document.querySelector('.center-panel');
 
-        const handleDragOver = (e) => {
+        // ドキュメント全体でドラッグオーバーを防止（ブラウザのデフォルト動作を阻止）
+        document.addEventListener('dragover', (e) => {
             e.preventDefault();
-            if (dropZone) dropZone.classList.add('drag-over');
-        };
+            e.stopPropagation();
+        });
 
-        const handleDragLeave = (e) => {
+        document.addEventListener('dragleave', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             if (dropZone) dropZone.classList.remove('drag-over');
-        };
+        });
 
-        const handleDrop = async (e) => {
+        document.addEventListener('drop', async (e) => {
             e.preventDefault();
+            e.stopPropagation();
             if (dropZone) dropZone.classList.remove('drag-over');
 
             const items = e.dataTransfer.items;
@@ -673,27 +671,14 @@ class TyranoFlowApp {
                     }
                 }
             }
-        };
+        });
 
-        // フローチャートビュー
+        // ドロップゾーンのビジュアル効果
         if (dropZone) {
-            dropZone.addEventListener('dragover', handleDragOver);
-            dropZone.addEventListener('dragleave', handleDragLeave);
-            dropZone.addEventListener('drop', handleDrop);
-        }
-
-        // タイムラインビュー
-        if (timelineView) {
-            timelineView.addEventListener('dragover', handleDragOver);
-            timelineView.addEventListener('dragleave', handleDragLeave);
-            timelineView.addEventListener('drop', handleDrop);
-        }
-
-        // 中央パネル全体（どちらのビューでも動作するように）
-        if (centerPanel) {
-            centerPanel.addEventListener('dragover', handleDragOver);
-            centerPanel.addEventListener('dragleave', handleDragLeave);
-            centerPanel.addEventListener('drop', handleDrop);
+            dropZone.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
         }
     }
 
