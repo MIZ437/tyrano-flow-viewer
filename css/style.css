@@ -271,62 +271,426 @@ body {
 }
 
 /* ========================================
-   タイムラインビュー
+   タイムラインビュー - Premiere Pro風
    ======================================== */
 .timeline-view {
-    background-color: #1a1a1a;
+    background: linear-gradient(180deg, #1e1e1e 0%, #191919 100%);
 }
 
-.timeline-container {
+/* タイムラインがアクティブな時のみflexレイアウト */
+.timeline-view.active {
+    display: flex !important;
+    flex-direction: column;
+    padding-bottom: 4px;
+}
+
+/* プレビューエリア（上部） - Premiere Pro風プログラムモニター */
+.timeline-preview {
+    flex: 1;
+    min-height: 250px;
+    background-color: #0a0a0a;
+    border: 1px solid #3a3a3a;
+    border-bottom: 2px solid #2d2d2d;
+    border-radius: 4px 4px 0 0;
+    margin: 4px 4px 0 4px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+.preview-placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #505050;
+    text-align: center;
+    background: linear-gradient(180deg, #0d0d0d 0%, #1a1a1a 100%);
+}
+
+.preview-placeholder p {
+    margin: 0;
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+}
+
+.preview-content {
+    width: 100%;
     height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #0a0a0a;
+}
+
+/* Premiere Pro風ヘッダーバー */
+.preview-header {
+    padding: 6px 12px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1f1f1f 100%);
+    border-bottom: 1px solid #3a3a3a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: 28px;
+}
+
+.preview-filename {
+    color: #00b4ff;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-shadow: 0 0 8px rgba(0, 180, 255, 0.3);
+}
+
+.preview-time {
+    color: #4ec9b0;
+    font-size: 0.75rem;
+    font-family: 'Consolas', 'Monaco', monospace;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 8px;
+    border-radius: 3px;
+}
+
+.preview-info {
+    color: #888888;
+    font-size: 0.75rem;
+    font-family: 'Consolas', 'Monaco', monospace;
+    padding: 20px;
+    text-align: center;
+}
+
+/* プレビュー本体 - Premiere Pro風 */
+.preview-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: stretch;
+    justify-content: stretch;
+    background: linear-gradient(180deg, #0d0d0d 0%, #151515 50%, #0d0d0d 100%);
+    position: relative;
+}
+
+/* プレビュー本体の直接の子要素を塗りつぶす */
+.preview-body > * {
+    flex: 1;
+    min-height: 0;
+}
+
+/* テキストプレビュー - スクロール可能なコンテナ */
+.preview-body .dialogue-scroll-container {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 12px;
+    background-color: #0d0d0d;
+}
+
+.preview-body .dialogue-item {
+    margin-bottom: 10px;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #1e1e1e 0%, #252526 100%);
+    border-radius: 6px;
+    border-left: 3px solid #00b4ff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease;
+}
+
+.preview-body .dialogue-item:hover {
+    transform: translateX(2px);
+}
+
+.preview-body .dialogue-speaker {
+    color: #4ec9b0;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.preview-body .dialogue-narrator {
+    color: #888888;
+    font-weight: 500;
+    font-style: italic;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+}
+
+.preview-body .dialogue-text {
+    color: #e0e0e0;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+.preview-body .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    padding: 12px;
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    background-color: #0d0d0d;
+}
+
+.preview-body .preview-grid-item {
+    background: linear-gradient(135deg, #1e1e1e 0%, #252526 100%);
+    border-radius: 6px;
+    padding: 14px;
+    border-left: 3px solid #00b4ff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    transition: transform 0.1s ease;
+}
+
+.preview-body .preview-grid-item:hover {
+    transform: translateY(-2px);
+}
+
+.preview-body .preview-grid-item.audio {
+    border-left-color: #4ec9b0;
+}
+
+.preview-body .grid-item-type {
+    color: #888888;
+    font-size: 0.7rem;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.preview-body .grid-item-name {
+    color: #e0e0e0;
+    font-size: 0.85rem;
+    word-break: break-all;
+    line-height: 1.4;
+}
+
+/* ========================================
+   タイムライン - Premiere Pro風 完全刷新
+   ======================================== */
+
+/* 情報バー */
+.timeline-info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #222222 100%);
+    border-top: 1px solid #3a3a3a;
+    border-bottom: 1px solid #1a1a1a;
+    font-size: 0.75rem;
+    color: #888888;
+}
+
+.timeline-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.timeline-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #3a3a3a;
+    border-radius: 3px;
+    background: #2d2d2d;
+    color: #888888;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    transition: all 0.15s ease;
+}
+
+.timeline-btn:hover {
+    background: #3a3a3a;
+    color: #ffffff;
+}
+
+#zoom-level {
+    min-width: 40px;
+    text-align: center;
+}
+
+/* タイムラインパネル */
+.timeline-panel {
+    flex: 1;
+    min-height: 200px;
+    background-color: #1a1a1a;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* タイムルーラー */
+.timeline-ruler {
+    display: flex;
+    height: 28px;
+    background: linear-gradient(180deg, #2d2d2d 0%, #252526 100%);
+    border-bottom: 1px solid #3a3a3a;
+    position: relative;
+    z-index: 20;
+    flex-shrink: 0;
+}
+
+.ruler-label-spacer {
+    width: 120px;
+    flex-shrink: 0;
+    background: linear-gradient(180deg, #2a2a2a 0%, #222222 100%);
+    border-right: 1px solid #3a3a3a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    color: #606060;
+}
+
+.ruler-content {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ルーラー目盛り */
+.ruler-marker {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    border-left: 1px solid #3a3a3a;
+    font-size: 0.6rem;
+    color: #606060;
+    display: flex;
+    align-items: flex-end;
+}
+
+.ruler-marker span {
+    padding: 2px 4px;
+    font-size: 0.6rem;
+    color: #888888;
+}
+
+.ruler-marker.major {
+    border-left-color: #505050;
+}
+
+.ruler-marker.major span {
+    color: #aaaaaa;
+}
+
+/* 再生ヘッド */
+.playhead {
+    position: absolute;
+    top: 0;
+    left: 120px;
+    width: 2px;
+    height: 100%;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.playhead-handle {
+    width: 16px;
+    height: 16px;
+    background: linear-gradient(180deg, #00b4ff 0%, #0088cc 100%);
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: ew-resize;
+    pointer-events: auto;
+    clip-path: polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    transition: background 0.1s ease;
+    z-index: 110;
+}
+
+.playhead-handle:hover {
+    background: linear-gradient(180deg, #33c4ff 0%, #00aaee 100%);
+}
+
+.playhead-line {
+    width: 2px;
+    height: 100%;
+    background: #00b4ff;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 8px rgba(0, 180, 255, 0.6);
+}
+
+/* トラックラッパー */
+.timeline-tracks-wrapper {
+    flex: 1;
     overflow: auto;
-    padding: 16px;
-    box-sizing: border-box;
+    position: relative;
 }
 
 .timeline-tracks {
     min-width: max-content;
+    min-height: 100%;
 }
 
+/* トラック */
 .timeline-track {
     display: flex;
-    align-items: stretch;
-    margin-bottom: 4px;
-    min-height: 50px;
+    height: 36px;
+    border-bottom: 1px solid #252525;
 }
 
+.timeline-track:nth-child(odd) {
+    background-color: #1e1e1e;
+}
+
+.timeline-track:nth-child(even) {
+    background-color: #1a1a1a;
+}
+
+/* トラックラベル */
 .track-label {
-    width: 80px;
+    width: 120px;
     flex-shrink: 0;
-    background-color: #2d2d2d;
-    color: #808080;
-    font-size: 0.75rem;
-    font-weight: 600;
+    background: linear-gradient(90deg, #2a2a2a 0%, #252526 100%);
+    color: #999999;
+    font-size: 0.7rem;
+    font-weight: 500;
     display: flex;
     align-items: center;
-    justify-content: center;
-    border-right: 1px solid #404040;
-    text-transform: uppercase;
+    padding: 0 10px;
+    border-right: 1px solid #3a3a3a;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
+.track-label:hover {
+    background: linear-gradient(90deg, #353535 0%, #2d2d2d 100%);
+    color: #ffffff;
+}
+
+.track-label.selected {
+    background: linear-gradient(90deg, #0a5a8c 0%, #084a72 100%);
+    color: #ffffff;
+}
+
+/* トラックコンテンツ */
 .track-content {
     flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 4px;
-    background-color: #252526;
-    min-width: 0;
     position: relative;
+    min-width: 0;
 }
 
-/* タイムラインクリップ */
+/* タイムラインクリップ - 絶対配置で正確なタイミング表示 */
 .timeline-clip {
-    height: 42px;
-    min-width: 60px;
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 0.7rem;
+    position: absolute;
+    top: 3px;
+    height: 30px;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-size: 0.65rem;
     color: #ffffff;
     cursor: pointer;
     overflow: hidden;
@@ -335,61 +699,83 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: center;
-    transition: filter 0.15s, transform 0.1s;
-    position: relative;
+    transition: filter 0.1s ease, box-shadow 0.1s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    min-width: 20px;
 }
 
 .timeline-clip:hover {
     filter: brightness(1.2);
-    transform: scaleY(1.05);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
     z-index: 10;
 }
 
 .timeline-clip.selected {
-    outline: 2px solid #ffffff;
+    outline: 2px solid #00b4ff;
     outline-offset: 1px;
 }
 
-.timeline-clip .clip-title {
-    font-weight: 600;
+.timeline-clip .clip-name {
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
-.timeline-clip .clip-info {
+/* クリップ内のタイトルとサブタイトル */
+.timeline-clip .clip-title {
+    font-weight: 600;
     font-size: 0.65rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.timeline-clip .clip-subtitle {
+    font-size: 0.55rem;
     opacity: 0.8;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-top: 1px;
 }
 
-/* トラック別カラー */
-.timeline-clip[data-track="text"] {
-    background: linear-gradient(135deg, #4ec9b0 0%, #3da890 100%);
+/* トラック種別カラー */
+.timeline-clip[data-type="text"] {
+    background: linear-gradient(180deg, #4ec9b0 0%, #3aa890 100%);
 }
 
-.timeline-clip[data-track="image"] {
-    background: linear-gradient(135deg, #ce9178 0%, #b87a60 100%);
+.timeline-clip[data-type="bg"] {
+    background: linear-gradient(180deg, #5c9fd4 0%, #4080b0 100%);
 }
 
-.timeline-clip[data-track="video"] {
-    background: linear-gradient(135deg, #c586c0 0%, #a56fa0 100%);
+.timeline-clip[data-type="image"] {
+    background: linear-gradient(180deg, #d49472 0%, #b87a5a 100%);
 }
 
-.timeline-clip[data-track="bgm"] {
-    background: linear-gradient(135deg, #6a9955 0%, #527a40 100%);
+.timeline-clip[data-type="chara"] {
+    background: linear-gradient(180deg, #e8a87a 0%, #cc8855 100%);
 }
 
-.timeline-clip[data-track="se"] {
-    background: linear-gradient(135deg, #dcdcaa 0%, #b8b888 100%);
-    color: #1e1e1e;
+.timeline-clip[data-type="video"] {
+    background: linear-gradient(180deg, #c98ac4 0%, #a96ca5 100%);
+}
+
+.timeline-clip[data-type="bgm"] {
+    background: linear-gradient(180deg, #6fa958 0%, #527a3e 100%);
+}
+
+.timeline-clip[data-type="se"] {
+    background: linear-gradient(180deg, #e2d85c 0%, #c5b83a 100%);
+    color: #2a2a2a;
 }
 
 /* タイムライン空状態 */
 .timeline-empty {
-    color: #808080;
+    color: #606060;
     font-size: 0.85rem;
-    padding: 20px;
+    padding: 40px 20px;
     text-align: center;
 }
 
@@ -906,4 +1292,225 @@ body {
     font-weight: normal;
     color: #808080;
     font-size: 0.8rem;
+}
+
+/* ========================================
+   タイムライン リソースクリップ
+   ======================================== */
+.resource-clip {
+    flex-shrink: 0;
+}
+
+.resource-clip .clip-subtitle {
+    font-size: 0.6rem;
+    opacity: 0.7;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ========================================
+   プレビューエリア リソース表示 - Premiere Pro風
+   ======================================== */
+/* Premiere Pro風プレビューコンテナ */
+.resource-preview-large {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background-color: #000000;
+    position: relative;
+}
+
+/* 画像・動画のレターボックス効果 */
+.resource-preview-large::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background:
+        linear-gradient(to right, #0a0a0a 0%, transparent 3%, transparent 97%, #0a0a0a 100%),
+        linear-gradient(to bottom, #0a0a0a 0%, transparent 3%, transparent 97%, #0a0a0a 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.resource-preview-large.audio {
+    background: linear-gradient(180deg, #1a1a1a 0%, #121212 50%, #1a1a1a 100%);
+}
+
+.resource-preview-large.audio::before {
+    display: none;
+}
+
+/* 画像プレビュー - Premiere Pro風 */
+.preview-image-large {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    cursor: pointer;
+    display: block;
+    border-radius: 2px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    transition: transform 0.15s ease;
+}
+
+.preview-image-large:hover {
+    transform: scale(1.02);
+}
+
+/* 動画プレビュー - Premiere Pro風 */
+.preview-video-large {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    background-color: #000;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    border-radius: 2px;
+}
+
+/* オーディオプレビュー - Premiere Pro風 */
+.preview-audio-large {
+    width: 90%;
+    max-width: 500px;
+    height: 54px;
+    border-radius: 4px;
+    background-color: #252525;
+}
+
+/* オーディオ波形風の背景 */
+.resource-preview-large.audio .audio-visual {
+    position: absolute;
+    width: 80%;
+    height: 60px;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 2px,
+        rgba(0, 180, 255, 0.1) 2px,
+        rgba(0, 180, 255, 0.1) 4px
+    );
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* テキストプレビュー用 - スクロール可能 */
+.preview-body .dialogue-container {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    padding: 16px;
+    background-color: #121212;
+}
+
+/* リソース情報詳細 */
+.resource-details {
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    padding: 12px 16px;
+    border-left: 3px solid #00b4ff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.resource-details p {
+    margin: 4px 0;
+    font-size: 0.85rem;
+    color: #d4d4d4;
+}
+
+.resource-details p strong {
+    color: #888888;
+    font-weight: 600;
+}
+
+/* プレビューが見つからない場合 */
+.preview-body .no-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #505050;
+    text-align: center;
+    padding: 40px;
+    font-size: 0.9rem;
+    font-style: italic;
+    background: transparent;
+}
+
+/* ========================================
+   タイムラインプレビュー - 新スタイル
+   ======================================== */
+
+/* テキストプレビュー */
+.preview-text-content {
+    padding: 20px;
+    background: linear-gradient(180deg, #1a1a1a 0%, #121212 100%);
+    height: 100%;
+    overflow-y: auto;
+}
+
+.preview-speaker {
+    color: #4ec9b0;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.preview-dialogue {
+    color: #e0e0e0;
+    font-size: 1.1rem;
+    line-height: 1.8;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 15px 20px;
+    border-radius: 8px;
+    border-left: 4px solid #00b4ff;
+}
+
+/* 画像プレビューコンテナ */
+.preview-image-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    position: relative;
+}
+
+.preview-image-fit {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+}
+
+/* オーディオプレビューコンテナ */
+.preview-audio-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, #1a1a1a 0%, #121212 100%);
+    gap: 20px;
+}
+
+.preview-audio-label {
+    color: #4ec9b0;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.preview-audio-container .preview-audio {
+    width: 80%;
+    max-width: 500px;
+    height: 54px;
 }

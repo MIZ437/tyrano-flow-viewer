@@ -6,8 +6,10 @@ class TyranoFlowApp {
     constructor() {
         this.parser = new TyranoParser();
         this.flowchart = new FlowchartGenerator();
+        this.timeline = new TimelineProcessor(); // 新しいタイムラインプロセッサ
         this.currentProjectPath = null;
         this.fileHandles = new Map();
+        this.fileContents = new Map(); // ファイル内容のキャッシュ
 
         // プロジェクトルートとdataフォルダのハンドル
         this.projectRootHandle = null;
@@ -28,6 +30,16 @@ class TyranoFlowApp {
         // パン・ズームコントローラー
         this.panZoom = null;
 
+        // タイムライン関連（新設計）
+        this.timelineZoom = 100; // 100% = 1[p] = 30px
+        this.pixelsPerUnit = 30; // 基本スケール
+        this.playheadTime = 0; // 再生ヘッドの時間位置（[p]単位）
+        this.isDraggingPlayhead = false;
+        this.selectedClip = null;
+        this.trackLabelWidth = 120; // トラックラベルの幅
+        this.selectedTrackId = null; // 選択中のトラックID
+        this.selectedTrackType = null; // 選択中のトラックタイプ
+
         this.init();
     }
 
@@ -41,6 +53,7 @@ class TyranoFlowApp {
         this.setupPanZoom();
         this.setupScrollContainment();
         this.setupViewTabs();
+        this.setupTimelineControls();
     }
 
     /**
@@ -61,6 +74,7 @@ class TyranoFlowApp {
         const tabTimeline = document.getElementById('tab-timeline');
         const dropZone = document.getElementById('drop-zone');
         const timelineView = document.getElementById('timeline-view');
+        const leftPanel = document.querySelector('.left-panel');
 
         if (tabFlowchart && tabTimeline) {
             tabFlowchart.addEventListener('click', () => {
@@ -68,6 +82,8 @@ class TyranoFlowApp {
                 tabTimeline.classList.remove('active');
                 dropZone.classList.add('active');
                 timelineView.classList.remove('active');
+                // 左パネルを表示
+                if (leftPanel) leftPanel.style.display = '';
             });
 
             tabTimeline.addEventListener('click', () => {
@@ -75,10 +91,394 @@ class TyranoFlowApp {
                 tabFlowchart.classList.remove('active');
                 timelineView.classList.add('active');
                 dropZone.classList.remove('active');
-                // タイムラインを描画
-                this.renderTimeline();
+                // 左パネルを非表示
+                if (leftPanel) leftPanel.style.display = 'none';
+                // タイムラインをビルドして描画
+                this.buildAndRenderTimeline();
             });
         }
+    }
+
+    /**
+     * タイムライン関連コントロールのセットアップ
+     */
+    setupTimelineControls() {
+        // ズームボタン
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', () => {
+                this.setZoom(this.timelineZoom + 25);
+            });
+        }
+
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', () => {
+                this.setZoom(this.timelineZoom - 25);
+            });
+        }
+
+        // 再生ヘッドのドラッグ
+        const playhead = document.getElementById('playhead');
+        const timelinePanel = document.getElementById('timeline-panel');
+
+        if (playhead && timelinePanel) {
+            const handle = playhead.querySelector('.playhead-handle');
+            if (handle) {
+                handle.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    this.isDraggingPlayhead = true;
+                    document.body.style.cursor = 'ew-resize';
+                });
+            }
+
+            document.addEventListener('mousemove', (e) => {
+                if (!this.isDraggingPlayhead) return;
+
+                const panel = document.getElementById('timeline-panel');
+                const wrapper = document.getElementById('timeline-tracks-wrapper');
+                if (!panel || !wrapper) return;
+
+                const panelRect = panel.getBoundingClientRect();
+                const scrollLeft = wrapper.scrollLeft;
+
+                // パネル左端からの視覚的位置 → 時間座標に変換
+                const visualX = e.clientX - panelRect.left;
+                const pixelX = visualX - this.trackLabelWidth + scrollLeft;
+                const time = this.pixelToTime(pixelX);
+                this.setPlayheadTime(Math.max(0, Math.min(time, this.timeline.totalTime)));
+            });
+
+            document.addEventListener('mouseup', () => {
+                if (this.isDraggingPlayhead) {
+                    this.isDraggingPlayhead = false;
+                    document.body.style.cursor = '';
+                }
+            });
+        }
+
+        // ルーラークリックで再生ヘッド移動
+        const rulerContent = document.getElementById('ruler-content');
+        const ruler = document.getElementById('timeline-ruler');
+        if (ruler) {
+            ruler.addEventListener('click', (e) => {
+                const panel = document.getElementById('timeline-panel');
+                const wrapper = document.getElementById('timeline-tracks-wrapper');
+                if (!panel || !wrapper) return;
+
+                const panelRect = panel.getBoundingClientRect();
+                const scrollLeft = wrapper.scrollLeft;
+
+                // パネル左端からの視覚的位置 → 時間座標に変換
+                const visualX = e.clientX - panelRect.left;
+                const pixelX = visualX - this.trackLabelWidth + scrollLeft;
+                const time = this.pixelToTime(pixelX);
+                this.setPlayheadTime(Math.max(0, Math.min(time, this.timeline.totalTime)));
+            });
+        }
+
+        // タイムラインスクロール同期
+        const tracksWrapper = document.getElementById('timeline-tracks-wrapper');
+        if (tracksWrapper && rulerContent) {
+            tracksWrapper.addEventListener('scroll', () => {
+                rulerContent.style.transform = `translateX(-${tracksWrapper.scrollLeft}px)`;
+                this.updatePlayheadVisual();
+            });
+
+            // トラックエリアのクリックで再生ヘッド移動
+            tracksWrapper.addEventListener('click', (e) => {
+                // クリップやラベルのクリックは除外（それぞれ独自のハンドラがある）
+                if (e.target.closest('.timeline-clip') || e.target.closest('.track-label')) {
+                    return;
+                }
+
+                const panel = document.getElementById('timeline-panel');
+                if (!panel) return;
+
+                const panelRect = panel.getBoundingClientRect();
+                const scrollLeft = tracksWrapper.scrollLeft;
+
+                const visualX = e.clientX - panelRect.left;
+                const pixelX = visualX - this.trackLabelWidth + scrollLeft;
+                const time = this.pixelToTime(pixelX);
+                this.setPlayheadTime(Math.max(0, Math.min(time, this.timeline.totalTime)));
+            });
+        }
+
+        // キーボードナビゲーション
+        document.addEventListener('keydown', (e) => {
+            // タイムラインビューがアクティブでない場合は無視
+            const timelineView = document.getElementById('timeline-view');
+            if (!timelineView || !timelineView.classList.contains('active')) return;
+
+            // 入力フォーカス中は無視
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            switch (e.key) {
+                case 'ArrowUp':
+                    e.preventDefault();
+                    this.navigateToClipEdge('prev');
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    this.navigateToClipEdge('next');
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.setPlayheadTime(Math.max(0, this.playheadTime - 1));
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.setPlayheadTime(Math.min(this.timeline.totalTime, this.playheadTime + 1));
+                    break;
+            }
+        });
+    }
+
+    /**
+     * クリップの端へ移動（上キー: 前のクリップ端、下キー: 次のクリップ端）
+     */
+    navigateToClipEdge(direction) {
+        if (!this.selectedTrackId) return;
+
+        const trackList = this.timeline.getTrackList();
+        const track = trackList.find(t => t.id === this.selectedTrackId);
+        if (!track || track.events.length === 0) return;
+
+        // 全てのクリップ境界（開始・終了時間）を収集してソート
+        const edges = new Set();
+        track.events.forEach(event => {
+            edges.add(event.startTime);
+            edges.add(event.endTime);
+        });
+        const sortedEdges = Array.from(edges).sort((a, b) => a - b);
+
+        const currentTime = this.playheadTime;
+
+        if (direction === 'next') {
+            // 現在位置より後の最初の境界を見つける
+            const nextEdge = sortedEdges.find(t => t > currentTime + 0.001);
+            if (nextEdge !== undefined) {
+                this.setPlayheadTime(nextEdge);
+            }
+        } else {
+            // 現在位置より前の最後の境界を見つける
+            const prevEdges = sortedEdges.filter(t => t < currentTime - 0.001);
+            if (prevEdges.length > 0) {
+                this.setPlayheadTime(prevEdges[prevEdges.length - 1]);
+            }
+        }
+    }
+
+    /**
+     * ズームレベルを設定
+     */
+    setZoom(zoom) {
+        this.timelineZoom = Math.max(25, Math.min(400, zoom));
+        const zoomLabel = document.getElementById('zoom-level');
+        if (zoomLabel) {
+            zoomLabel.textContent = `${this.timelineZoom}%`;
+        }
+        // タイムラインを再描画
+        this.renderTimelineTracks();
+    }
+
+    /**
+     * 時間をピクセルに変換
+     */
+    timeToPixel(time) {
+        return time * this.pixelsPerUnit * (this.timelineZoom / 100);
+    }
+
+    /**
+     * ピクセルを時間に変換
+     */
+    pixelToTime(pixel) {
+        return pixel / (this.pixelsPerUnit * (this.timelineZoom / 100));
+    }
+
+    /**
+     * 再生ヘッドの時間位置を設定
+     */
+    setPlayheadTime(time) {
+        this.playheadTime = time;
+        this.updatePlayheadVisual();
+        this.updatePreviewAtTime(time);
+
+        // プレビュー時間表示を更新
+        const previewTime = document.getElementById('preview-time');
+        if (previewTime) {
+            previewTime.textContent = `[${Math.floor(time)}p]`;
+        }
+    }
+
+    /**
+     * 再生ヘッドの表示を更新
+     */
+    updatePlayheadVisual() {
+        const playhead = document.getElementById('playhead');
+        const tracksWrapper = document.getElementById('timeline-tracks-wrapper');
+
+        if (!playhead || !tracksWrapper) return;
+
+        const scrollLeft = tracksWrapper.scrollLeft;
+        const pixelX = this.timeToPixel(this.playheadTime);
+        const visualX = this.trackLabelWidth + pixelX - scrollLeft;
+
+        playhead.style.left = `${visualX}px`;
+    }
+
+    /**
+     * 指定時間のプレビューを更新
+     */
+    updatePreviewAtTime(time) {
+        const events = this.timeline.getEventsAtTime(time);
+        if (events.length === 0) {
+            this.clearPreview();
+            return;
+        }
+
+        let targetEvent = null;
+
+        // 選択中のトラックがある場合、そのトラックのイベントを優先
+        if (this.selectedTrackId) {
+            const trackList = this.timeline.getTrackList();
+            const selectedTrack = trackList.find(t => t.id === this.selectedTrackId);
+            if (selectedTrack) {
+                // 選択トラックのイベントから現在時間に該当するものを探す
+                targetEvent = selectedTrack.events.find(e =>
+                    e.startTime <= time && e.endTime > time
+                );
+            }
+        }
+
+        // 選択トラックにイベントがない場合はフォールバック
+        if (!targetEvent) {
+            // 優先順位: テキスト > キャラ > 画像 > 背景 > BGM > SE
+            targetEvent = events.find(e => e.type === 'text') ||
+                          events.find(e => e.type === 'chara') ||
+                          events.find(e => e.type === 'image') ||
+                          events.find(e => e.type === 'bg') ||
+                          events.find(e => e.type === 'bgm') ||
+                          events.find(e => e.type === 'se') ||
+                          events[0];
+        }
+
+        if (targetEvent) {
+            this.showEventPreview(targetEvent);
+        } else {
+            this.clearPreview();
+        }
+    }
+
+    /**
+     * プレビューをクリア
+     */
+    clearPreview() {
+        const placeholder = document.getElementById('preview-placeholder');
+        const content = document.getElementById('preview-content');
+        if (placeholder) placeholder.style.display = 'flex';
+        if (content) content.style.display = 'none';
+    }
+
+    /**
+     * イベントのプレビューを表示
+     */
+    async showEventPreview(event) {
+        const placeholder = document.getElementById('preview-placeholder');
+        const content = document.getElementById('preview-content');
+        const filenameEl = document.getElementById('preview-filename');
+        const previewBody = document.getElementById('preview-body');
+
+        if (!content || !filenameEl || !previewBody) return;
+
+        placeholder.style.display = 'none';
+        content.style.display = 'flex';
+
+        filenameEl.textContent = event.filename || '';
+
+        let html = '';
+
+        switch (event.type) {
+            case 'text':
+                html = `<div class="preview-text-content">
+                    ${event.speaker ? `<div class="preview-speaker">${this.escapeHtml(event.speaker)}</div>` : ''}
+                    <div class="preview-dialogue">${this.escapeHtml(event.text)}</div>
+                </div>`;
+                break;
+
+            case 'bg':
+                if (event.storage) {
+                    const blobUrl = await this.getResourceBlobUrl(event.storage, 'bgimage');
+                    if (blobUrl) {
+                        html = `<div class="preview-image-container">
+                            <img src="${blobUrl}" alt="${event.storage}" class="preview-image-fit">
+                        </div>`;
+                    } else {
+                        html = `<div class="preview-info">背景: ${event.storage}</div>`;
+                    }
+                }
+                break;
+
+            case 'image':
+                if (event.storage) {
+                    const blobUrl = await this.getResourceBlobUrl(event.storage, 'fgimage');
+                    if (blobUrl) {
+                        html = `<div class="preview-image-container">
+                            <img src="${blobUrl}" alt="${event.storage}" class="preview-image-fit">
+                        </div>`;
+                    } else {
+                        html = `<div class="preview-info">画像: ${event.storage} (レイヤー${event.layer})</div>`;
+                    }
+                }
+                break;
+
+            case 'chara':
+                html = `<div class="preview-info">
+                    <div>キャラ: ${event.name}</div>
+                    ${event.face ? `<div>表情: ${event.face}</div>` : ''}
+                </div>`;
+                break;
+
+            case 'bgm':
+                if (event.storage) {
+                    const blobUrl = await this.getResourceBlobUrl(event.storage, 'bgm');
+                    if (blobUrl) {
+                        html = `<div class="preview-audio-container">
+                            <div class="preview-audio-label">BGM: ${event.storage}</div>
+                            <audio controls class="preview-audio">
+                                <source src="${blobUrl}">
+                            </audio>
+                        </div>`;
+                    } else {
+                        html = `<div class="preview-info">BGM: ${event.storage}</div>`;
+                    }
+                }
+                break;
+
+            case 'se':
+                if (event.storage) {
+                    const blobUrl = await this.getResourceBlobUrl(event.storage, 'sound');
+                    if (blobUrl) {
+                        html = `<div class="preview-audio-container">
+                            <div class="preview-audio-label">SE: ${event.storage}</div>
+                            <audio controls class="preview-audio">
+                                <source src="${blobUrl}">
+                            </audio>
+                        </div>`;
+                    } else {
+                        html = `<div class="preview-info">SE: ${event.storage}</div>`;
+                    }
+                }
+                break;
+
+            case 'video':
+                html = `<div class="preview-info">動画: ${event.storage || '(不明)'}</div>`;
+                break;
+        }
+
+        previewBody.innerHTML = html;
     }
 
     /**
@@ -941,123 +1341,292 @@ class TyranoFlowApp {
     }
 
     /**
-     * タイムラインを描画
+     * タイムラインをビルドして描画
      */
-    renderTimeline() {
-        const trackText = document.getElementById('track-text');
-        const trackImage = document.getElementById('track-image');
-        const trackVideo = document.getElementById('track-video');
-        const trackBgm = document.getElementById('track-bgm');
-        const trackSe = document.getElementById('track-se');
+    async buildAndRenderTimeline() {
+        // タイムラインプロセッサをクリア
+        this.timeline.clear();
 
-        if (!trackText) return;
-
-        // トラックをクリア
-        trackText.innerHTML = '';
-        trackImage.innerHTML = '';
-        trackVideo.innerHTML = '';
-        trackBgm.innerHTML = '';
-        trackSe.innerHTML = '';
+        // トラック選択をリセット（最初のトラックが自動選択される）
+        this.selectedTrackId = null;
+        this.selectedTrackType = null;
 
         if (this.flowchart.parsedFiles.size === 0) {
-            trackText.innerHTML = '<div class="timeline-empty">フォルダを読み込んでください</div>';
+            const tracksContainer = document.getElementById('timeline-tracks');
+            if (tracksContainer) {
+                tracksContainer.innerHTML = '<div class="timeline-empty">フォルダを読み込んでください</div>';
+            }
             return;
         }
 
-        // ストーリーファイルを時系列順に取得
+        // ストーリーファイルを時系列順に取得して処理
         const storyFiles = this.flowchart.getSortedStoryFiles();
 
-        // クリップ幅の基準を計算（最小幅60px、クリック数に応じて拡大）
-        const minWidth = 80;
-        const widthPerClick = 3;
+        console.log('=== Building Timeline ===');
+        console.log(`Processing ${storyFiles.length} story files...`);
 
-        storyFiles.forEach(({ filename, data }) => {
-            const clickCount = data.clickCount || 1;
-            const clipWidth = Math.max(minWidth, clickCount * widthPerClick);
+        for (const { filename, data } of storyFiles) {
+            // ファイル内容を取得
+            const handle = this.fileHandles.get(filename);
+            if (handle) {
+                try {
+                    const file = await handle.getFile();
+                    const content = await file.text();
+                    this.fileContents.set(filename, content);
 
-            // テキストトラック - ファイル単位でクリップを作成
-            const textClip = this.createTimelineClip(filename, data, 'text', clipWidth);
-            trackText.appendChild(textClip);
+                    // [p]タグと@pコマンドの数をカウント（デバッグ用）
+                    const bracketPCount = (content.match(/\[p(?:\s[^\]]*)?]/gi) || []).length;
+                    const atPCount = (content.match(/^@p(?:\s|$)/gim) || []).length;
+                    const timeBeforeFile = this.timeline.currentTime;
 
-            // 画像トラック
-            if (data.images.length > 0) {
-                const imageClip = this.createTimelineClip(filename, data, 'image', clipWidth, `${data.images.length}枚`);
-                trackImage.appendChild(imageClip);
-            } else {
-                trackImage.appendChild(this.createEmptyClip(clipWidth));
+                    // TimelineProcessorで処理
+                    this.timeline.processFile(content, filename);
+
+                    console.log(`  ${filename}: [p]=${bracketPCount} @p=${atPCount}, time ${timeBeforeFile}→${this.timeline.currentTime}`);
+                } catch (error) {
+                    console.warn(`Failed to read file: ${filename}`, error);
+                }
             }
+        }
 
-            // 動画トラック
-            if (data.videos.length > 0) {
-                const videoClip = this.createTimelineClip(filename, data, 'video', clipWidth, `${data.videos.length}本`);
-                trackVideo.appendChild(videoClip);
-            } else {
-                trackVideo.appendChild(this.createEmptyClip(clipWidth));
-            }
+        // 処理を完了（未終了イベントを閉じる）
+        this.timeline.finalize();
 
-            // BGMトラック
-            const bgmList = data.audio.filter(a => a.type === 'bgm' || a.type === 'playbgm');
-            if (bgmList.length > 0) {
-                const bgmClip = this.createTimelineClip(filename, data, 'bgm', clipWidth, `${bgmList.length}曲`);
-                trackBgm.appendChild(bgmClip);
-            } else {
-                trackBgm.appendChild(this.createEmptyClip(clipWidth));
-            }
+        // 統計を更新
+        this.updateTimelineStats();
 
-            // SEトラック
-            const seList = data.audio.filter(a => a.type !== 'bgm' && a.type !== 'playbgm');
-            if (seList.length > 0) {
-                const seClip = this.createTimelineClip(filename, data, 'se', clipWidth, `${seList.length}個`);
-                trackSe.appendChild(seClip);
-            } else {
-                trackSe.appendChild(this.createEmptyClip(clipWidth));
-            }
-        });
+        // トラックを描画
+        this.renderTimelineTracks();
+
+        // 再生ヘッドを先頭に
+        this.setPlayheadTime(0);
     }
 
     /**
-     * タイムラインクリップを作成
+     * タイムライン統計を更新
      */
-    createTimelineClip(filename, data, trackType, width, info = null) {
+    updateTimelineStats() {
+        const stats = this.timeline.getStats();
+        const statsEl = document.getElementById('timeline-stats');
+        if (statsEl) {
+            statsEl.textContent = `トラック: ${stats.trackCount} | イベント: ${stats.totalEvents} | 総時間: ${stats.totalTime} [p]`;
+        }
+    }
+
+    /**
+     * タイムライントラックを描画
+     */
+    renderTimelineTracks() {
+        const tracksContainer = document.getElementById('timeline-tracks');
+        const rulerContent = document.getElementById('ruler-content');
+
+        if (!tracksContainer) return;
+
+        tracksContainer.innerHTML = '';
+        if (rulerContent) rulerContent.innerHTML = '';
+
+        const trackList = this.timeline.getTrackList();
+
+        if (trackList.length === 0) {
+            tracksContainer.innerHTML = '<div class="timeline-empty">タイムラインデータがありません</div>';
+            return;
+        }
+
+        // デバッグ: レンダリング設定を出力
+        console.log('=== Render Timeline Tracks ===');
+        console.log(`pixelsPerUnit: ${this.pixelsPerUnit}, timelineZoom: ${this.timelineZoom}%`);
+        console.log(`totalTime: ${this.timeline.totalTime}, tracks: ${trackList.length}`);
+
+        // 総時間からタイムラインの幅を計算
+        const totalWidth = this.timeToPixel(this.timeline.totalTime) + 100;
+        console.log(`totalWidth: ${totalWidth}px`);
+
+        // ルーラーを生成
+        if (rulerContent) {
+            this.renderRuler(rulerContent, this.timeline.totalTime);
+        }
+
+        // 各トラックを生成
+        trackList.forEach(track => {
+            const trackEl = this.createTrackElement(track, totalWidth);
+            tracksContainer.appendChild(trackEl);
+        });
+
+        // 再生ヘッドの表示を更新
+        this.updatePlayheadVisual();
+    }
+
+    /**
+     * ルーラーを生成
+     */
+    renderRuler(container, totalTime) {
+        container.innerHTML = '';
+
+        // 目盛り間隔を計算（ズームに応じて調整）
+        let interval = 1;
+        if (this.timelineZoom < 50) interval = 10;
+        else if (this.timelineZoom < 100) interval = 5;
+        else if (this.timelineZoom > 200) interval = 1;
+        else interval = 2;
+
+        for (let t = 0; t <= totalTime; t += interval) {
+            const marker = document.createElement('div');
+            marker.className = 'ruler-marker';
+            marker.style.left = `${this.timeToPixel(t)}px`;
+
+            // 5の倍数は大きめのマーカー
+            if (t % 5 === 0) {
+                marker.classList.add('major');
+                marker.innerHTML = `<span>${t}</span>`;
+            }
+
+            container.appendChild(marker);
+        }
+
+        container.style.width = `${this.timeToPixel(totalTime) + 100}px`;
+    }
+
+    /**
+     * トラック要素を作成
+     */
+    createTrackElement(track, totalWidth) {
+        const trackEl = document.createElement('div');
+        trackEl.className = 'timeline-track';
+        trackEl.dataset.trackId = track.id;
+        trackEl.dataset.trackType = track.type;
+
+        // トラックラベル
+        const label = document.createElement('div');
+        label.className = 'track-label';
+        label.textContent = track.name;
+
+        // 最初のトラックを自動選択
+        if (!this.selectedTrackId) {
+            this.selectedTrackId = track.id;
+            this.selectedTrackType = track.type;
+            label.classList.add('selected');
+        } else if (this.selectedTrackId === track.id) {
+            label.classList.add('selected');
+        }
+
+        label.addEventListener('click', () => {
+            // 選択状態を更新
+            document.querySelectorAll('.track-label').forEach(l => l.classList.remove('selected'));
+            label.classList.add('selected');
+
+            // 選択トラックを記憶
+            this.selectedTrackId = track.id;
+            this.selectedTrackType = track.type;
+
+            // 現在の再生ヘッド位置でプレビューを更新
+            this.updatePreviewAtTime(this.playheadTime);
+        });
+        trackEl.appendChild(label);
+
+        // トラックコンテンツ（クリップ配置エリア）
+        const content = document.createElement('div');
+        content.className = 'track-content';
+        content.style.width = `${totalWidth}px`;
+
+        // クリップを配置
+        track.events.forEach(event => {
+            const clip = this.createClipElement(event, track);
+            content.appendChild(clip);
+        });
+
+        trackEl.appendChild(content);
+        return trackEl;
+    }
+
+    /**
+     * クリップ要素を作成
+     */
+    createClipElement(event, track) {
         const clip = document.createElement('div');
         clip.className = 'timeline-clip';
-        clip.dataset.track = trackType;
-        clip.dataset.filename = filename;
+        clip.dataset.type = event.type;
+
+        // デバッグ用データ属性
+        clip.dataset.startTime = event.startTime;
+        clip.dataset.endTime = event.endTime;
+
+        // 位置とサイズを計算（NaN対策）
+        const startTime = typeof event.startTime === 'number' ? event.startTime : 0;
+        const endTime = typeof event.endTime === 'number' ? event.endTime : startTime + 0.5;
+        const left = this.timeToPixel(startTime);
+        const duration = Math.max(endTime - startTime, 0.5); // 最小0.5単位
+        const width = Math.max(this.timeToPixel(duration), 20);
+
+        clip.style.left = `${left}px`;
         clip.style.width = `${width}px`;
 
-        const title = document.createElement('div');
-        title.className = 'clip-title';
-        title.textContent = filename.replace('.ks', '');
-        clip.appendChild(title);
+        // クリップ内容
+        let title = '';
+        let subtitle = '';
 
-        const infoText = document.createElement('div');
-        infoText.className = 'clip-info';
-        if (trackType === 'text') {
-            infoText.textContent = `${data.clickCount}クリック`;
-        } else if (info) {
-            infoText.textContent = info;
+        switch (event.type) {
+            case 'text':
+                title = event.speaker || 'ナレーション';
+                subtitle = event.text.substring(0, 30) + (event.text.length > 30 ? '...' : '');
+                break;
+            case 'bg':
+                title = '背景';
+                subtitle = event.storage || '';
+                break;
+            case 'image':
+                title = `画像 L${event.layer}`;
+                subtitle = event.storage || '';
+                break;
+            case 'chara':
+                title = event.name;
+                subtitle = event.face || '';
+                break;
+            case 'video':
+                title = '動画';
+                subtitle = event.storage || '';
+                break;
+            case 'bgm':
+                title = 'BGM';
+                subtitle = event.storage || '';
+                break;
+            case 'se':
+                title = 'SE';
+                subtitle = event.storage || '';
+                break;
         }
-        clip.appendChild(infoText);
 
-        // クリックでファイル詳細を表示
-        clip.addEventListener('click', () => {
-            // 選択状態を更新
+        clip.innerHTML = `
+            <div class="clip-title">${this.escapeHtml(title)}</div>
+            <div class="clip-subtitle">${this.escapeHtml(subtitle)}</div>
+        `;
+
+        // クリックでプレビューとトラック選択
+        clip.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            // クリップ選択状態を更新
             document.querySelectorAll('.timeline-clip').forEach(c => c.classList.remove('selected'));
             clip.classList.add('selected');
-            // ファイル詳細を表示
-            this.showFileDetails(filename, data);
+
+            // トラック選択状態も更新
+            document.querySelectorAll('.track-label').forEach(l => l.classList.remove('selected'));
+            const trackEl = clip.closest('.timeline-track');
+            if (trackEl) {
+                const label = trackEl.querySelector('.track-label');
+                if (label) label.classList.add('selected');
+            }
+
+            // 選択トラックを記憶
+            this.selectedTrackId = track.id;
+            this.selectedTrackType = track.type;
+
+            // プレビューを表示
+            this.showEventPreview(event);
+
+            // 再生ヘッドをクリップの開始位置に移動
+            this.setPlayheadTime(event.startTime);
         });
 
-        return clip;
-    }
-
-    /**
-     * 空のクリップ（プレースホルダー）を作成
-     */
-    createEmptyClip(width) {
-        const clip = document.createElement('div');
-        clip.style.width = `${width}px`;
-        clip.style.flexShrink = '0';
         return clip;
     }
 }

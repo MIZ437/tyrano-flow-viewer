@@ -72,29 +72,48 @@
                     </div>
                 </div>
 
-                <!-- タイムラインビュー -->
+                <!-- タイムラインビュー（Premiere Pro風） -->
                 <div id="timeline-view" class="timeline-view view-content">
-                    <div class="timeline-container" id="timeline-container">
-                        <div class="timeline-tracks">
-                            <div class="timeline-track" data-track="text">
-                                <div class="track-label">テキスト</div>
-                                <div class="track-content" id="track-text"></div>
+                    <!-- プレビューエリア（プログラムモニター風） -->
+                    <div class="timeline-preview" id="timeline-preview">
+                        <div class="preview-placeholder" id="preview-placeholder">
+                            <p>クリップをクリックしてプレビュー</p>
+                        </div>
+                        <div class="preview-content" id="preview-content" style="display: none;">
+                            <div class="preview-header">
+                                <span class="preview-filename" id="preview-filename"></span>
+                                <span class="preview-time" id="preview-time"></span>
                             </div>
-                            <div class="timeline-track" data-track="image">
-                                <div class="track-label">画像</div>
-                                <div class="track-content" id="track-image"></div>
-                            </div>
-                            <div class="timeline-track" data-track="video">
-                                <div class="track-label">動画</div>
-                                <div class="track-content" id="track-video"></div>
-                            </div>
-                            <div class="timeline-track" data-track="bgm">
-                                <div class="track-label">BGM</div>
-                                <div class="track-content" id="track-bgm"></div>
-                            </div>
-                            <div class="timeline-track" data-track="se">
-                                <div class="track-label">SE</div>
-                                <div class="track-content" id="track-se"></div>
+                            <div class="preview-body" id="preview-body"></div>
+                        </div>
+                    </div>
+
+                    <!-- タイムライン情報バー -->
+                    <div class="timeline-info-bar">
+                        <span id="timeline-stats">トラック: 0 | イベント: 0 | 総時間: 0 [p]</span>
+                        <div class="timeline-controls">
+                            <button id="zoom-out-btn" class="timeline-btn" title="縮小">−</button>
+                            <span id="zoom-level">100%</span>
+                            <button id="zoom-in-btn" class="timeline-btn" title="拡大">+</button>
+                        </div>
+                    </div>
+
+                    <!-- タイムラインパネル -->
+                    <div class="timeline-panel" id="timeline-panel">
+                        <!-- タイムルーラー -->
+                        <div class="timeline-ruler" id="timeline-ruler">
+                            <div class="ruler-label-spacer"></div>
+                            <div class="ruler-content" id="ruler-content"></div>
+                        </div>
+                        <!-- 再生ヘッド -->
+                        <div class="playhead" id="playhead">
+                            <div class="playhead-handle"></div>
+                            <div class="playhead-line"></div>
+                        </div>
+                        <!-- トラックコンテナ（動的に生成） -->
+                        <div class="timeline-tracks-wrapper" id="timeline-tracks-wrapper">
+                            <div class="timeline-tracks" id="timeline-tracks">
+                                <!-- トラックはJSで動的に生成 -->
                             </div>
                         </div>
                     </div>
@@ -127,6 +146,7 @@
     <!-- スクリプト -->
     <script src="js/parser.js"></script>
     <script src="js/flowchart.js"></script>
+    <script src="js/timeline.js"></script>
     <script src="js/panzoom.js"></script>
     <script src="js/app.js"></script>
 </body>
