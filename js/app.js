@@ -315,11 +315,38 @@ class TyranoFlowApp {
         this.updatePlayheadVisual();
         this.updatePreviewAtTime(time);
         this.highlightClipAtPlayhead(time);
+        this.ensurePlayheadVisible();
 
         // プレビュー時間表示を更新
         const previewTime = document.getElementById('preview-time');
         if (previewTime) {
             previewTime.textContent = `[${Math.floor(time)}p]`;
+        }
+    }
+
+    /**
+     * 再生ヘッドが画面外に出ようとした場合、タイムラインをスクロールして追従
+     */
+    ensurePlayheadVisible() {
+        const wrapper = document.getElementById('timeline-tracks-wrapper');
+        if (!wrapper) return;
+
+        const pixelX = this.timeToPixel(this.playheadTime);
+        const scrollLeft = wrapper.scrollLeft;
+        const visibleWidth = wrapper.clientWidth;
+
+        // マージン（端からこの距離に入ったらスクロール開始）
+        const margin = 50;
+
+        // 再生ヘッドの位置（スクロール後の可視領域内での位置）
+        const relativeX = pixelX - scrollLeft;
+
+        if (relativeX < margin) {
+            // 左端に近づいた場合、左にスクロール
+            wrapper.scrollLeft = Math.max(0, pixelX - margin);
+        } else if (relativeX > visibleWidth - margin) {
+            // 右端に近づいた場合、右にスクロール
+            wrapper.scrollLeft = pixelX - visibleWidth + margin;
         }
     }
 
