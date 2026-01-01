@@ -7,6 +7,8 @@ class FlowchartGenerator {
     constructor() {
         this.parsedFiles = new Map();
         this.renderCount = 0; // ユニークID用カウンター
+        this.storySummary = {}; // ストーリー要約（story-summary.jsonから読み込み）
+        this.displayMode = 'simple'; // 'simple' | 'detail'
 
         // システムファイルのパターン（フローチャートから除外）
         this.systemFilePatterns = [
@@ -22,6 +24,13 @@ class FlowchartGenerator {
             /^backlog\.ks$/i,
             /^menu\.ks$/i
         ];
+    }
+
+    /**
+     * 表示モードを設定
+     */
+    setDisplayMode(mode) {
+        this.displayMode = mode;
     }
 
     /**
@@ -116,6 +125,40 @@ class FlowchartGenerator {
     }
 
     /**
+     * ストーリー要約を設定
+     */
+    setStorySummary(summary) {
+        this.storySummary = summary || {};
+    }
+
+    /**
+     * ストーリー要約JSONファイルを読み込み
+     * @param {FileSystemDirectoryHandle} dirHandle - プロジェクトのディレクトリハンドル
+     */
+    async loadStorySummaryFromDir(dirHandle) {
+        try {
+            const fileHandle = await dirHandle.getFileHandle('story-summary.json');
+            const file = await fileHandle.getFile();
+            const content = await file.text();
+            this.storySummary = JSON.parse(content);
+            console.log('Loaded story summary:', Object.keys(this.storySummary).length, 'entries');
+            return true;
+        } catch (error) {
+            // ファイルが存在しない場合は空のオブジェクトのまま
+            console.log('No story-summary.json found, using filenames as labels');
+            this.storySummary = {};
+            return false;
+        }
+    }
+
+    /**
+     * ファイル名に対応する要約ラベルを取得
+     */
+    getSummaryLabel(filename) {
+        return this.storySummary[filename] || null;
+    }
+
+    /**
      * ファイル名を安全なID形式に変換
      */
     sanitizeId(filename) {
@@ -134,11 +177,60 @@ class FlowchartGenerator {
         return text
             // HTMLタグを除去
             .replace(/<[^>]*>/g, '')
-            // 特殊文字をエスケープ
+            // Mermaidの特殊文字をエスケープ
             .replace(/"/g, "'")
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
+            .replace(/>/g, "&gt;")
+            .replace(/\[/g, "&#91;")
+            .replace(/\]/g, "&#93;")
+            .replace(/\{/g, "&#123;")
+            .replace(/\}/g, "&#125;");
+    }
+
+    /**
+     * 簡易表示用のラベルを生成（ファイル名のみ）
+     */
+    generateSimpleLabel(filename, data) {
+        // ファイル名をそのまま表示
+        return this.escapeLabel(filename);
+    }
+
+    /**
+     * 詳細表示用のラベルを生成
+     */
+    generateDetailLabel(filename, data) {
+        const summaryData = this.getSummaryLabel(filename);
+
+        let lines = [filename];
+
+        if (summaryData && typeof summaryData === 'object') {
+            // 舞台
+            if (summaryData.scene) {
+                lines.push(`舞台：${summaryData.scene}`);
+            }
+
+            // 登場人物（全員表示）
+            if (summaryData.characters && summaryData.characters.length > 0) {
+                summaryData.characters.forEach(c => {
+                    lines.push(`登場人物：${c.name}`);
+                });
+            }
+
+            // 状況（summary）
+            if (summaryData.summary) {
+                lines.push(`状況：${summaryData.summary}`);
+            }
+
+            // ユーザーに与える感情
+            if (summaryData.emotion) {
+                lines.push(`ユーザーに与える感情：${summaryData.emotion}`);
+            }
+        } else if (summaryData && typeof summaryData === 'string') {
+            lines.push(`状況：${summaryData}`);
+        }
+
+        return this.escapeLabel(lines.join('\\n'));
     }
 
     /**
@@ -159,9 +251,11 @@ class FlowchartGenerator {
         // 各ファイルのノードと接続を生成（時系列順）
         storyFiles.forEach(({ filename, data }) => {
             const nodeId = this.sanitizeId(filename);
-            const clickCount = data.clickCount || 0;
-            // ラベルを安全にエスケープ
-            const label = this.escapeLabel(`${filename}\n${clickCount}クリック`);
+
+            // 表示モードに応じてラベルを生成
+            const label = this.displayMode === 'detail'
+                ? this.generateDetailLabel(filename, data)
+                : this.generateSimpleLabel(filename, data);
 
             mermaid += `    ${nodeId}["${label}"]\n`;
 
@@ -173,7 +267,8 @@ class FlowchartGenerator {
                     if (!connections.has(connectionKey)) {
                         connections.add(connectionKey);
                         if (jump.cond) {
-                            mermaid += `    ${nodeId} -->|条件付き| ${targetId}\n`;
+                            const condLabel = this.escapeLabel(jump.cond);
+                            mermaid += `    ${nodeId} -->|${condLabel}| ${targetId}\n`;
                         } else {
                             mermaid += `    ${nodeId} --> ${targetId}\n`;
                         }
@@ -200,7 +295,7 @@ class FlowchartGenerator {
                     const connectionKey = `${nodeId}->${targetId}-link`;
                     if (!connections.has(connectionKey)) {
                         connections.add(connectionKey);
-                        const linkLabel = link.text ? this.escapeLabel(link.text.substring(0, 8)) : link.type;
+                        const linkLabel = link.text ? this.escapeLabel(link.text) : '選択';
                         mermaid += `    ${nodeId} -->|${linkLabel}| ${targetId}\n`;
                     }
                 }
@@ -225,6 +320,7 @@ class FlowchartGenerator {
         }
 
         const mermaidCode = this.generateMermaidCode();
+        console.log('Mermaid code length:', mermaidCode.length);
 
         try {
             // ユニークなIDを生成（Mermaidは同じIDを再利用できない）
@@ -238,14 +334,13 @@ class FlowchartGenerator {
             // SVGのスタイル調整
             const svgElement = container.querySelector('svg');
             if (svgElement) {
-                // viewBoxを削除して固定サイズにしない
-                svgElement.removeAttribute('width');
-                svgElement.removeAttribute('height');
-                svgElement.style.width = 'auto';
-                svgElement.style.height = 'auto';
+                // viewBoxはそのまま維持（Mermaidのレイアウトを尊重）
                 svgElement.style.maxWidth = 'none';
                 svgElement.style.maxHeight = 'none';
                 svgElement.style.overflow = 'visible';
+
+                // ノードのサイズを統一
+                this.equalizeNodeSizes(svgElement);
             }
 
             // ノードにクリックイベントを追加
@@ -253,7 +348,96 @@ class FlowchartGenerator {
         } catch (error) {
             console.error('Mermaid render error:', error);
             console.error('Mermaid code:', mermaidCode);
-            container.innerHTML = `<pre class="error">フローチャート生成エラー:\n${error.message}\n\nコード:\n${mermaidCode}</pre>`;
+            container.innerHTML = `<pre class="error">フローチャート生成エラー:\n${error.message}</pre>`;
+        }
+    }
+
+    /**
+     * ノードのサイズを統一（最大サイズに合わせる）
+     */
+    equalizeNodeSizes(svgElement) {
+        const nodes = svgElement.querySelectorAll('.node');
+        if (nodes.length === 0) return;
+
+        // 全ノードのrect要素を収集し、最大幅・最大高さを計算
+        let maxWidth = 0;
+        let maxHeight = 0;
+        const nodeData = [];
+
+        nodes.forEach(node => {
+            const rect = node.querySelector('rect');
+            if (rect) {
+                const width = parseFloat(rect.getAttribute('width')) || 0;
+                const height = parseFloat(rect.getAttribute('height')) || 0;
+                if (width > maxWidth) maxWidth = width;
+                if (height > maxHeight) maxHeight = height;
+                nodeData.push({ node, rect });
+            }
+        });
+
+        // 全ノードを最大サイズに統一
+        if (maxWidth > 0 && maxHeight > 0) {
+            nodeData.forEach(({ node, rect }) => {
+                const currentWidth = parseFloat(rect.getAttribute('width')) || 0;
+                const currentHeight = parseFloat(rect.getAttribute('height')) || 0;
+                const widthDiff = maxWidth - currentWidth;
+                const heightDiff = maxHeight - currentHeight;
+
+                // rectの現在位置
+                const currentX = parseFloat(rect.getAttribute('x')) || 0;
+                const currentY = parseFloat(rect.getAttribute('y')) || 0;
+
+                // rectの新しい位置（中央を維持）
+                const newRectX = currentX - widthDiff / 2;
+                const newRectY = currentY - heightDiff / 2;
+
+                // rectのサイズと位置を更新
+                rect.setAttribute('width', maxWidth);
+                rect.setAttribute('height', maxHeight);
+                rect.setAttribute('x', newRectX);
+                rect.setAttribute('y', newRectY);
+
+                // labelグループ（foreignObjectの親）を取得
+                const labelGroup = node.querySelector('g.label');
+                if (labelGroup) {
+                    // labelグループのtransformをrectの左上に合わせる
+                    labelGroup.setAttribute('transform', `translate(${newRectX}, ${newRectY})`);
+
+                    // foreignObjectをlabelグループ内で(0,0)から開始し、rect全体をカバー
+                    const foreignObject = labelGroup.querySelector('foreignObject');
+                    if (foreignObject) {
+                        foreignObject.setAttribute('x', 0);
+                        foreignObject.setAttribute('y', 0);
+                        foreignObject.setAttribute('width', maxWidth);
+                        foreignObject.setAttribute('height', maxHeight);
+
+                        // 内部のdivを中央揃え
+                        const outerDiv = foreignObject.querySelector('div');
+                        if (outerDiv) {
+                            outerDiv.style.cssText = `
+                                display: flex !important;
+                                align-items: center !important;
+                                justify-content: center !important;
+                                width: ${maxWidth}px !important;
+                                height: ${maxHeight}px !important;
+                                text-align: center !important;
+                                box-sizing: border-box !important;
+                                padding: 10px !important;
+                            `;
+
+                            // 内部のspan(nodeLabel)
+                            const nodeLabel = outerDiv.querySelector('.nodeLabel, span');
+                            if (nodeLabel) {
+                                nodeLabel.style.cssText = `
+                                    text-align: center !important;
+                                    display: block !important;
+                                    width: 100% !important;
+                                `;
+                            }
+                        }
+                    }
+                }
+            });
         }
     }
 

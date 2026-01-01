@@ -54,6 +54,104 @@ class TyranoFlowApp {
         this.setupScrollContainment();
         this.setupViewTabs();
         this.setupTimelineControls();
+        this.setupPanelToggle();
+        this.setupDisplayModeToggle();
+    }
+
+    /**
+     * 表示モード切り替え機能のセットアップ
+     */
+    setupDisplayModeToggle() {
+        const modeSimple = document.getElementById('mode-simple');
+        const modeDetail = document.getElementById('mode-detail');
+
+        if (modeSimple && modeDetail) {
+            modeSimple.addEventListener('click', async () => {
+                if (this.flowchart.displayMode === 'simple') return;
+
+                modeSimple.classList.add('active');
+                modeDetail.classList.remove('active');
+                this.flowchart.setDisplayMode('simple');
+
+                // Mermaid設定を簡易表示用に最適化
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: 'dark',
+                    flowchart: {
+                        useMaxWidth: false,
+                        htmlLabels: true,
+                        curve: 'basis',
+                        nodeSpacing: 200,
+                        rankSpacing: 50,
+                        padding: 20,
+                        diagramPadding: 80
+                    }
+                });
+
+                // フローチャートを再描画
+                if (this.flowchart.parsedFiles.size > 0) {
+                    await this.flowchart.render('flowchart-container');
+                    if (this.panZoom) {
+                        this.panZoom.attachToSvg();
+                    }
+                }
+            });
+
+            modeDetail.addEventListener('click', async () => {
+                if (this.flowchart.displayMode === 'detail') return;
+
+                modeDetail.classList.add('active');
+                modeSimple.classList.remove('active');
+                this.flowchart.setDisplayMode('detail');
+
+                // Mermaid設定を詳細表示用に調整
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: 'dark',
+                    flowchart: {
+                        useMaxWidth: false,
+                        htmlLabels: true,
+                        curve: 'basis',
+                        nodeSpacing: 250,
+                        rankSpacing: 60,
+                        padding: 25,
+                        diagramPadding: 100
+                    }
+                });
+
+                // フローチャートを再描画
+                if (this.flowchart.parsedFiles.size > 0) {
+                    await this.flowchart.render('flowchart-container');
+                    if (this.panZoom) {
+                        this.panZoom.attachToSvg();
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * パネル折りたたみ機能のセットアップ
+     */
+    setupPanelToggle() {
+        const leftPanel = document.getElementById('left-panel');
+        const rightPanel = document.getElementById('right-panel');
+        const leftToggle = document.getElementById('left-panel-toggle');
+        const rightToggle = document.getElementById('right-panel-toggle');
+
+        if (leftPanel && leftToggle) {
+            leftToggle.addEventListener('click', () => {
+                leftPanel.classList.toggle('collapsed');
+                leftToggle.textContent = leftPanel.classList.contains('collapsed') ? '▶' : '◀';
+            });
+        }
+
+        if (rightPanel && rightToggle) {
+            rightToggle.addEventListener('click', () => {
+                rightPanel.classList.toggle('collapsed');
+                rightToggle.textContent = rightPanel.classList.contains('collapsed') ? '◀' : '▶';
+            });
+        }
     }
 
     /**
@@ -770,6 +868,13 @@ class TyranoFlowApp {
                         scenarioHandle = dirHandle;
                     }
                 }
+            }
+
+            // story-summary.jsonを探して読み込み（複数の場所を試行）
+            const summaryLocations = [scenarioHandle, this.dataHandle, dirHandle].filter(h => h);
+            for (const handle of summaryLocations) {
+                const loaded = await this.flowchart.loadStorySummaryFromDir(handle);
+                if (loaded) break;
             }
 
             // .ksファイルを読み込む（systemフォルダを除外）
@@ -1699,7 +1804,7 @@ class TyranoFlowApp {
 
 // アプリ起動
 document.addEventListener('DOMContentLoaded', () => {
-    // Mermaidの初期化
+    // Mermaidの初期化（簡易表示用に最適化）
     mermaid.initialize({
         startOnLoad: false,
         theme: 'dark',
@@ -1707,9 +1812,11 @@ document.addEventListener('DOMContentLoaded', () => {
             useMaxWidth: false,
             htmlLabels: true,
             curve: 'basis',
-            nodeSpacing: 50,
-            rankSpacing: 80,
-            padding: 20
+            nodeSpacing: 200,
+            rankSpacing: 50,
+            padding: 20,
+            wrappingWidth: 300,
+            diagramPadding: 80
         },
         themeVariables: {
             primaryColor: '#3c3c3c',

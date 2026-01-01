@@ -127,6 +127,80 @@ body {
     flex-direction: column;
     overflow: hidden;
     min-height: 0;
+    transition: width 0.3s ease;
+}
+
+.left-panel.collapsed {
+    width: 40px;
+}
+
+.left-panel.collapsed .file-list,
+.left-panel.collapsed .panel-header h2 {
+    display: none;
+}
+
+.left-panel.collapsed .panel-header {
+    justify-content: center;
+    padding: 12px 0;
+}
+
+/* 右パネル: ファイル詳細 */
+.right-panel {
+    width: 320px;
+    background-color: #252526;
+    border-left: 1px solid #404040;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+    transition: width 0.3s ease;
+}
+
+.right-panel.collapsed {
+    width: 40px;
+}
+
+.right-panel.collapsed .file-details,
+.right-panel.collapsed .panel-header h2 {
+    display: none;
+}
+
+.right-panel.collapsed .panel-header {
+    justify-content: center;
+    padding: 12px 0;
+}
+
+/* パネルヘッダー */
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-bottom: 1px solid #404040;
+    background-color: #2d2d2d;
+}
+
+.panel-header h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #808080;
+    margin: 0;
+    flex: 1;
+}
+
+.panel-toggle {
+    background: none;
+    border: none;
+    color: #808080;
+    cursor: pointer;
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    transition: color 0.2s;
+}
+
+.panel-toggle:hover {
+    color: #ffffff;
 }
 
 .left-panel h2,
@@ -135,8 +209,6 @@ body {
     font-weight: 600;
     text-transform: uppercase;
     color: #808080;
-    padding: 12px 16px;
-    border-bottom: 1px solid #404040;
 }
 
 .file-list {
@@ -248,6 +320,45 @@ body {
 .view-tab.active {
     color: #ffffff;
     border-bottom-color: #0e639c;
+}
+
+.view-tabs-spacer {
+    flex: 1;
+}
+
+.display-mode-toggle {
+    display: flex;
+    gap: 2px;
+    margin-right: 8px;
+}
+
+.mode-btn {
+    padding: 4px 10px;
+    border: 1px solid #404040;
+    background: #2d2d2d;
+    color: #808080;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.mode-btn:first-child {
+    border-radius: 4px 0 0 4px;
+}
+
+.mode-btn:last-child {
+    border-radius: 0 4px 4px 0;
+}
+
+.mode-btn:hover {
+    background: #3c3c3c;
+    color: #d4d4d4;
+}
+
+.mode-btn.active {
+    background: #0e639c;
+    border-color: #0e639c;
+    color: #ffffff;
 }
 
 .view-content-wrapper {
@@ -856,17 +967,6 @@ body {
     font-size: 1rem;
 }
 
-/* 右パネル: ファイル詳細 */
-.right-panel {
-    width: 320px;
-    background-color: #252526;
-    border-left: 1px solid #404040;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    min-height: 0;
-}
-
 .file-details {
     flex: 1;
     min-height: 0;
@@ -1018,12 +1118,60 @@ body {
 /* ========================================
    Mermaid フローチャートのカスタマイズ
    ======================================== */
-.flowchart-container .node rect {
+.flowchart-container .node rect,
+.flowchart-container .node polygon {
     cursor: pointer;
 }
 
-.flowchart-container .node:hover rect {
+.flowchart-container .node:hover rect,
+.flowchart-container .node:hover polygon {
     filter: brightness(1.2);
+}
+
+/* ノードの幅を統一（最大幅に合わせる） */
+.flowchart-container .node {
+    min-width: 350px !important;
+}
+
+.flowchart-container .node rect {
+    min-width: 350px !important;
+}
+
+.flowchart-container .nodeLabel {
+    min-width: 330px !important;
+    text-align: center;
+}
+
+/* ノード内テキストの中央揃え強化 */
+.flowchart-container .node foreignObject {
+    overflow: visible !important;
+}
+
+.flowchart-container .node foreignObject div {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    height: 100% !important;
+    text-align: center !important;
+}
+
+.flowchart-container .node foreignObject span {
+    text-align: center !important;
+    width: 100% !important;
+    display: block !important;
+}
+
+.flowchart-container .node .nodeLabel {
+    text-align: center !important;
+    width: 100% !important;
+}
+
+/* ノード内のパディング調整 */
+.flowchart-container .node .nodeLabel {
+    padding: 16px 20px !important;
+    line-height: 1.6 !important;
 }
 
 /* ========================================

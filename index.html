@@ -45,8 +45,11 @@
     <!-- メインコンテンツ -->
     <main class="main-content">
         <!-- 左パネル: ファイル一覧 -->
-        <aside class="left-panel">
-            <h2>ファイル一覧</h2>
+        <aside class="left-panel" id="left-panel">
+            <div class="panel-header">
+                <h2>ファイル一覧</h2>
+                <button class="panel-toggle" id="left-panel-toggle" title="パネルを折りたたむ">◀</button>
+            </div>
             <div id="file-list" class="file-list">
             </div>
         </aside>
@@ -56,7 +59,14 @@
             <!-- 表示切替タブ -->
             <div class="view-tabs">
                 <button id="tab-flowchart" class="view-tab active">フローチャート</button>
+                <!-- タイムライン機能は一時的に無効化
                 <button id="tab-timeline" class="view-tab">タイムライン</button>
+                -->
+                <div class="view-tabs-spacer"></div>
+                <div class="display-mode-toggle">
+                    <button id="mode-simple" class="mode-btn active" title="簡易表示">簡易</button>
+                    <button id="mode-detail" class="mode-btn" title="詳細表示">詳細</button>
+                </div>
             </div>
 
             <!-- ビューコンテンツラッパー -->
@@ -71,9 +81,8 @@
                     </div>
                 </div>
 
-                <!-- タイムラインビュー（Premiere Pro風） -->
+                <!-- タイムラインビュー（一時的に無効化）
                 <div id="timeline-view" class="timeline-view view-content">
-                    <!-- プレビューエリア（プログラムモニター風） -->
                     <div class="timeline-preview" id="timeline-preview">
                         <div class="preview-placeholder" id="preview-placeholder">
                             <p>クリップをクリックしてプレビュー</p>
@@ -86,8 +95,6 @@
                             <div class="preview-body" id="preview-body"></div>
                         </div>
                     </div>
-
-                    <!-- タイムライン情報バー -->
                     <div class="timeline-info-bar">
                         <span id="timeline-stats">トラック: 0 | イベント: 0 | 総時間: 0 [p]</span>
                         <div class="timeline-controls">
@@ -96,33 +103,31 @@
                             <button id="zoom-in-btn" class="timeline-btn" title="拡大">+</button>
                         </div>
                     </div>
-
-                    <!-- タイムラインパネル -->
                     <div class="timeline-panel" id="timeline-panel">
-                        <!-- タイムルーラー -->
                         <div class="timeline-ruler" id="timeline-ruler">
                             <div class="ruler-label-spacer"></div>
                             <div class="ruler-content" id="ruler-content"></div>
                         </div>
-                        <!-- 再生ヘッド -->
                         <div class="playhead" id="playhead">
                             <div class="playhead-handle"></div>
                             <div class="playhead-line"></div>
                         </div>
-                        <!-- トラックコンテナ（動的に生成） -->
                         <div class="timeline-tracks-wrapper" id="timeline-tracks-wrapper">
                             <div class="timeline-tracks" id="timeline-tracks">
-                                <!-- トラックはJSで動的に生成 -->
                             </div>
                         </div>
                     </div>
                 </div>
+                -->
             </div>
         </section>
 
         <!-- 右パネル: ファイル詳細 -->
-        <aside class="right-panel">
-            <h2>ファイル詳細</h2>
+        <aside class="right-panel" id="right-panel">
+            <div class="panel-header">
+                <button class="panel-toggle" id="right-panel-toggle" title="パネルを折りたたむ">▶</button>
+                <h2>ファイル詳細</h2>
+            </div>
             <div id="file-details" class="file-details">
             </div>
         </aside>
