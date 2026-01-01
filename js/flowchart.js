@@ -240,11 +240,11 @@ class FlowchartGenerator {
         const storyFiles = this.getSortedStoryFiles();
 
         if (storyFiles.length === 0) {
-            return 'graph TD\n    empty[ストーリーファイルがありません]';
+            return 'flowchart TD\n    empty[ストーリーファイルがありません]';
         }
 
         // 上から下へ流れるグラフ（縦長）
-        let mermaid = 'graph TD\n';
+        let mermaid = 'flowchart TD\n';
         const connections = new Set();
         const storyFileNames = new Set(storyFiles.map(f => f.filename));
 
@@ -266,7 +266,11 @@ class FlowchartGenerator {
                     const connectionKey = `${nodeId}->${targetId}`;
                     if (!connections.has(connectionKey)) {
                         connections.add(connectionKey);
-                        if (jump.cond) {
+                        // タイトルへの遷移は太矢印（ラベルなし）
+                        const isToTitle = jump.storage.toLowerCase().includes('title');
+                        if (isToTitle) {
+                            mermaid += `    ${nodeId} ==> ${targetId}\n`;
+                        } else if (jump.cond) {
                             const condLabel = this.escapeLabel(jump.cond);
                             mermaid += `    ${nodeId} -->|${condLabel}| ${targetId}\n`;
                         } else {
@@ -295,8 +299,15 @@ class FlowchartGenerator {
                     const connectionKey = `${nodeId}->${targetId}-link`;
                     if (!connections.has(connectionKey)) {
                         connections.add(connectionKey);
-                        const linkLabel = link.text ? this.escapeLabel(link.text) : '選択';
-                        mermaid += `    ${nodeId} -->|${linkLabel}| ${targetId}\n`;
+                        // タイトルへの遷移、またはラベルに「タイトル」「戻る」を含む場合はラベルなし＆太矢印
+                        const isToTitle = link.storage.toLowerCase().includes('title');
+                        const labelHasTitle = link.text && (link.text.includes('タイトル') || link.text.includes('戻る'));
+                        if (isToTitle || labelHasTitle) {
+                            mermaid += `    ${nodeId} ==> ${targetId}\n`;
+                        } else {
+                            const linkLabel = link.text ? this.escapeLabel(link.text) : '選択';
+                            mermaid += `    ${nodeId} -->|${linkLabel}| ${targetId}\n`;
+                        }
                     }
                 }
             });
@@ -305,6 +316,11 @@ class FlowchartGenerator {
         // スタイル定義
         mermaid += '\n    %% スタイル\n';
         mermaid += '    classDef default fill:#3c3c3c,stroke:#0e639c,stroke-width:2px,color:#d4d4d4;\n';
+
+        // デバッグ：生成されたMermaidコードを出力
+        console.log('=== Generated Mermaid Code ===');
+        console.log(mermaid);
+        console.log('=== End Mermaid Code ===');
 
         return mermaid;
     }
@@ -341,6 +357,9 @@ class FlowchartGenerator {
 
                 // ノードのサイズを統一
                 this.equalizeNodeSizes(svgElement);
+
+                // タイトルへ戻る線を太くする
+                this.styleBackEdge(svgElement);
             }
 
             // ノードにクリックイベントを追加
@@ -444,6 +463,282 @@ class FlowchartGenerator {
                 }
             });
         }
+    }
+
+    /**
+     * 全ての線のスタイルを整える
+     */
+    styleBackEdge(svgElement) {
+        // Mermaidが生成したマーカーを探す
+        const markers = svgElement.querySelectorAll('marker');
+        let mermaidMarkerId = null;
+
+        markers.forEach(marker => {
+            const id = marker.getAttribute('id') || '';
+            if (id.includes('flowchart') && id.includes('pointEnd')) {
+                mermaidMarkerId = id;
+                // マーカーのサイズを調整
+                marker.setAttribute('markerWidth', '12');
+                marker.setAttribute('markerHeight', '12');
+                marker.setAttribute('refX', '10');
+                marker.setAttribute('refY', '6');
+            }
+        });
+
+        console.log('Mermaidマーカー:', mermaidMarkerId);
+
+        // flowchart-linkクラスを持つパス（エッジ）を取得
+        const edgePaths = svgElement.querySelectorAll('path.flowchart-link');
+
+        if (edgePaths.length > 0) {
+            edgePaths.forEach(path => {
+                path.style.strokeWidth = '2.5px';
+                path.style.stroke = '#0e639c';
+                // Mermaidのマーカーが存在すれば使用
+                if (mermaidMarkerId) {
+                    path.setAttribute('marker-end', `url(#${mermaidMarkerId})`);
+                }
+            });
+            console.log('エッジをスタイル設定:', edgePaths.length, '本');
+            return;
+        }
+
+        // flowchart-linkがない場合、全path要素から線を探す
+        const allPaths = svgElement.querySelectorAll('path');
+        let edgeCount = 0;
+
+        // カスタムマーカーを作成
+        let defs = svgElement.querySelector('defs');
+        if (!defs) {
+            defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+            svgElement.insertBefore(defs, svgElement.firstChild);
+        }
+
+        const customMarkerId = 'custom-arrow';
+        if (!defs.querySelector(`#${customMarkerId}`)) {
+            const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+            marker.setAttribute('id', customMarkerId);
+            marker.setAttribute('viewBox', '0 0 10 10');
+            marker.setAttribute('refX', '10');
+            marker.setAttribute('refY', '5');
+            marker.setAttribute('markerWidth', '8');
+            marker.setAttribute('markerHeight', '8');
+            marker.setAttribute('orient', 'auto');
+
+            const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            arrowPath.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+            arrowPath.setAttribute('fill', '#0e639c');
+
+            marker.appendChild(arrowPath);
+            defs.appendChild(marker);
+        }
+
+        allPaths.forEach(path => {
+            // マーカー内やノード内のパスを除外
+            if (path.closest('marker') || path.closest('.node')) return;
+
+            const fill = path.getAttribute('fill');
+            const d = path.getAttribute('d') || '';
+
+            // 線と判定
+            if ((fill === 'none' || !fill) && d.length > 20) {
+                path.style.strokeWidth = '2.5px';
+                path.style.stroke = '#0e639c';
+                path.setAttribute('marker-end', `url(#${customMarkerId})`);
+                edgeCount++;
+            }
+        });
+
+        console.log('エッジをスタイル設定（フォールバック）:', edgeCount, '本');
+    }
+
+    /**
+     * 「タイトルへ戻る」線（バックエッジ）を左側に再描画（無効化）
+     */
+    adjustBackEdge(svgElement) {
+        const nodes = svgElement.querySelectorAll('.node');
+        if (nodes.length === 0) return;
+
+        // ノード情報を収集
+        const nodeInfos = [];
+        let minLeft = Infinity;
+
+        nodes.forEach(node => {
+            const rect = node.querySelector('rect');
+            if (!rect) return;
+
+            const transform = node.getAttribute('transform');
+            let tx = 0, ty = 0;
+            if (transform) {
+                const match = transform.match(/translate\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/);
+                if (match) {
+                    tx = parseFloat(match[1]);
+                    ty = parseFloat(match[2]);
+                }
+            }
+
+            const rectX = parseFloat(rect.getAttribute('x')) || 0;
+            const rectY = parseFloat(rect.getAttribute('y')) || 0;
+            const rectW = parseFloat(rect.getAttribute('width')) || 0;
+            const rectH = parseFloat(rect.getAttribute('height')) || 0;
+
+            const left = tx + rectX;
+            const centerY = ty + rectY + rectH / 2;
+
+            if (left < minLeft) minLeft = left;
+
+            // ノードIDからファイル名を推測
+            const nodeId = node.id || '';
+            nodeInfos.push({
+                node,
+                id: nodeId,
+                left,
+                centerX: tx + rectX + rectW / 2,
+                centerY,
+                top: ty + rectY,
+                bottom: ty + rectY + rectH
+            });
+        });
+
+        console.log('ノード数:', nodeInfos.length);
+
+        // タイトルノード（最も上にある）を探す
+        let titleNode = null;
+        let minY = Infinity;
+        nodeInfos.forEach(info => {
+            if (info.top < minY) {
+                minY = info.top;
+                titleNode = info;
+            }
+        });
+
+        // エンディングノード（最も下にある）を探す - IDではなく位置で判定
+        let endingNode = null;
+        let maxY = -Infinity;
+        nodeInfos.forEach(info => {
+            if (info.bottom > maxY) {
+                maxY = info.bottom;
+                endingNode = info;
+            }
+        });
+
+        console.log('タイトルノード:', titleNode ? titleNode.id : 'null', 'top:', titleNode?.top);
+        console.log('エンディングノード:', endingNode ? endingNode.id : 'null', 'bottom:', endingNode?.bottom);
+
+        // ノードが2つ以上あり、タイトルとエンディングが異なる場合のみ処理
+        if (!titleNode || !endingNode || nodeInfos.length < 2) {
+            console.log('ノードが不十分です');
+            return;
+        }
+
+        // タイトルとエンディングが同じ場合（フローチャートが一直線の場合など）は処理しない
+        if (titleNode === endingNode) {
+            console.log('タイトルとエンディングが同じノードです');
+            return;
+        }
+
+        // バックエッジラベルを探す
+        const edgeLabels = svgElement.querySelectorAll('.edgeLabel');
+        const edgePaths = svgElement.querySelectorAll('.edgePath');
+
+        let backEdgeLabel = null;
+        let backEdgeLabelY = 0;
+
+        edgeLabels.forEach((label) => {
+            const text = label.textContent || '';
+            if (text.includes('タイトル') || text.includes('戻る')) {
+                backEdgeLabel = label;
+                const transform = label.getAttribute('transform');
+                if (transform) {
+                    const match = transform.match(/translate\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)/);
+                    if (match) {
+                        backEdgeLabelY = parseFloat(match[2]);
+                    }
+                }
+            }
+        });
+
+        if (!backEdgeLabel) {
+            console.log('バックエッジラベルが見つかりません');
+            return;
+        }
+
+        // 対応する元のパスを探して非表示にする
+        // ラベルのY座標に最も近いパスで、かつ高さが大きいもの（上下に長い線）
+        let originalPath = null;
+        let bestMatch = { path: null, score: -Infinity };
+
+        edgePaths.forEach((edgePath) => {
+            const path = edgePath.querySelector('path');
+            if (!path) return;
+
+            try {
+                const bbox = path.getBBox();
+                // バックエッジは縦に長い（高さが大きい）
+                const heightScore = bbox.height;
+                // ラベルのY座標がパスの範囲内にある
+                const labelInRange = backEdgeLabelY >= bbox.y && backEdgeLabelY <= bbox.y + bbox.height;
+
+                if (labelInRange && heightScore > bestMatch.score) {
+                    bestMatch = { path: edgePath, score: heightScore, bbox };
+                }
+            } catch (e) {}
+        });
+
+        if (bestMatch.path) {
+            originalPath = bestMatch.path;
+            // 元のパスを非表示
+            originalPath.style.display = 'none';
+            console.log('元のバックエッジパスを非表示:', bestMatch.bbox);
+        }
+
+        // 新しいパスを作成（左側を通る）
+        const leftX = minLeft - 100; // ノードの左端より100px左
+        const startY = endingNode.centerY;
+        const endY = titleNode.centerY;
+        const midY = (startY + endY) / 2;
+
+        // シンプルな折れ線パス（エンディング→左→タイトル）
+        const pathD = `M ${endingNode.left} ${startY} L ${leftX} ${startY} L ${leftX} ${endY} L ${titleNode.left} ${endY}`;
+
+        console.log('新しいパス:', pathD);
+
+        // 新しいパス要素を作成
+        const newPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        newPath.setAttribute('d', pathD);
+        newPath.setAttribute('class', 'back-edge-path');
+        newPath.setAttribute('fill', 'none');
+        newPath.setAttribute('stroke', '#0e639c');
+        newPath.setAttribute('stroke-width', '2');
+
+        // マーカーを探して設定（Mermaidのマーカーを再利用）
+        const existingMarker = svgElement.querySelector('marker[id*="flowchart"]');
+        if (existingMarker) {
+            newPath.setAttribute('marker-end', `url(#${existingMarker.id})`);
+            console.log('マーカー使用:', existingMarker.id);
+        }
+
+        // SVGに追加
+        const edgePathsGroup = svgElement.querySelector('.edgePaths');
+        if (edgePathsGroup) {
+            edgePathsGroup.appendChild(newPath);
+            console.log('edgePathsグループに追加');
+        } else {
+            // edgePathsがなければ直接SVGに追加
+            const firstG = svgElement.querySelector('g');
+            if (firstG) {
+                firstG.appendChild(newPath);
+                console.log('最初のgに追加');
+            } else {
+                svgElement.appendChild(newPath);
+                console.log('SVGに直接追加');
+            }
+        }
+
+        // ラベルを新しいパスの中央（左側）に移動
+        backEdgeLabel.setAttribute('transform', `translate(${leftX - 80}, ${midY})`);
+
+        console.log('新しいバックエッジパスを作成:', { leftX, startY, endY, midY });
     }
 
     /**

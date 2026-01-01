@@ -84,7 +84,8 @@ class TyranoFlowApp {
                         nodeSpacing: 300,
                         rankSpacing: 200,
                         padding: 20,
-                        diagramPadding: 100
+                        diagramPadding: 100,
+                        arrowMarkerAbsolute: true
                     }
                 });
 
@@ -115,7 +116,8 @@ class TyranoFlowApp {
                         nodeSpacing: 300,
                         rankSpacing: 200,
                         padding: 40,
-                        diagramPadding: 100
+                        diagramPadding: 100,
+                        arrowMarkerAbsolute: true
                     }
                 });
 

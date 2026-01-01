@@ -1174,6 +1174,50 @@ body {
     line-height: 1.6 !important;
 }
 
+/* エッジラベル（接続線のテキスト）を大きく表示 */
+.flowchart-container .edgeLabel {
+    font-size: 3rem !important;
+    font-weight: 600 !important;
+}
+
+.flowchart-container .edgeLabel .label {
+    font-size: 3rem !important;
+    font-weight: 600 !important;
+}
+
+.flowchart-container .edgeLabel foreignObject {
+    overflow: visible !important;
+}
+
+.flowchart-container .edgeLabel span {
+    font-size: 3rem !important;
+    font-weight: 600 !important;
+    background-color: rgba(30, 30, 30, 0.9) !important;
+    padding: 18px 30px !important;
+    border-radius: 8px !important;
+    color: #4ec9b0 !important;
+    border: 2px solid #0e639c !important;
+    white-space: nowrap !important;
+}
+
+/* 全ての線を太くする */
+.flowchart-container .edgePath path.flowchart-link {
+    stroke-width: 2.5px !important;
+    stroke: #0e639c !important;
+}
+
+/* Mermaidの矢印マーカーを目立たせる */
+.flowchart-container marker#flowchart-pointEnd path,
+.flowchart-container marker[id*="flowchart"] path {
+    fill: #0e639c !important;
+    stroke: none !important;
+}
+
+/* カスタム矢印マーカー */
+.flowchart-container marker#custom-arrow path {
+    fill: #0e639c !important;
+}
+
 /* ========================================
    スクロールバー
    ======================================== */
