@@ -375,7 +375,11 @@ class FlowchartGenerator {
             }
         });
 
-        // 全ノードを最大サイズに統一
+        // 全ノードを最大サイズに統一（追加マージンを含む）
+        const extraPadding = 40; // 追加の余白
+        maxWidth += extraPadding;
+        maxHeight += extraPadding;
+
         if (maxWidth > 0 && maxHeight > 0) {
             nodeData.forEach(({ node, rect }) => {
                 const currentWidth = parseFloat(rect.getAttribute('width')) || 0;
@@ -422,7 +426,8 @@ class FlowchartGenerator {
                                 height: ${maxHeight}px !important;
                                 text-align: center !important;
                                 box-sizing: border-box !important;
-                                padding: 10px !important;
+                                padding: 15px !important;
+                                line-height: 1.4 !important;
                             `;
 
                             // 内部のspan(nodeLabel)

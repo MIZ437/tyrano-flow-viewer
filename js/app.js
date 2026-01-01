@@ -81,10 +81,10 @@ class TyranoFlowApp {
                         useMaxWidth: false,
                         htmlLabels: true,
                         curve: 'basis',
-                        nodeSpacing: 200,
-                        rankSpacing: 50,
+                        nodeSpacing: 300,
+                        rankSpacing: 200,
                         padding: 20,
-                        diagramPadding: 80
+                        diagramPadding: 100
                     }
                 });
 
@@ -112,9 +112,9 @@ class TyranoFlowApp {
                         useMaxWidth: false,
                         htmlLabels: true,
                         curve: 'basis',
-                        nodeSpacing: 250,
-                        rankSpacing: 60,
-                        padding: 25,
+                        nodeSpacing: 300,
+                        rankSpacing: 200,
+                        padding: 40,
                         diagramPadding: 100
                     }
                 });
@@ -1812,11 +1812,11 @@ document.addEventListener('DOMContentLoaded', () => {
             useMaxWidth: false,
             htmlLabels: true,
             curve: 'basis',
-            nodeSpacing: 200,
-            rankSpacing: 50,
+            nodeSpacing: 300,
+            rankSpacing: 200,
             padding: 20,
             wrappingWidth: 300,
-            diagramPadding: 80
+            diagramPadding: 100
         },
         themeVariables: {
             primaryColor: '#3c3c3c',
